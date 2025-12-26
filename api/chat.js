@@ -1,23 +1,25 @@
-// api/chat.js
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  const { q, mode } = req.query; // mode can be educator, researcher, friendly
 
-  const { message, mode } = req.body;
-
-  if (!message) {
-    return res.status(400).json({ error: "No message provided" });
+  if (!q) {
+    return res.status(400).json({ error: "No query provided" });
   }
 
   try {
-    // Customize AI personality based on mode
-    const systemPrompt =
-      mode === "researcher" ? "You are a detailed researcher." :
-      mode === "friendly" ? "You are a friendly tutor. Use simple language and emojis." :
-      "You are an AI educator. Explain clearly and simply.";
+    // Choose system prompt based on mode
+    let systemPrompt = "";
+    switch (mode) {
+      case "researcher":
+        systemPrompt = "You are a helpful researcher, very detailed and analytical.";
+        break;
+      case "friendly":
+        systemPrompt = "You are a friendly tutor, explaining things in a simple and kind way.";
+        break;
+      case "educator":
+      default:
+        systemPrompt = "You are an AI educator, providing clear and concise explanations for students.";
+    }
 
-    // Call OpenAI GPT-5 Nano
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -28,7 +30,7 @@ export default async function handler(req, res) {
         model: "gpt-5-nano",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: message }
+          { role: "user", content: q }
         ],
         max_tokens: 500
       })
@@ -36,11 +38,12 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const reply = data.choices?.[0]?.message?.content || "Sorry, no response.";
+    const reply = data.choices?.[0]?.message?.content || "No response";
+
     return res.status(200).json({ reply });
 
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Server error", details: err.message });
+  } catch (error) {
+    console.error("Serverless error:", error);
+    return res.status(500).json({ error: "Something went wrong", details: error.message });
   }
 }
