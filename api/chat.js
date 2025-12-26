@@ -11,12 +11,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Determine system prompt based on mode
+    // Customize AI personality based on mode
     const systemPrompt =
       mode === "researcher" ? "You are a detailed researcher." :
       mode === "friendly" ? "You are a friendly tutor. Use simple language and emojis." :
       "You are an AI educator. Explain clearly and simply.";
 
+    // Call OpenAI GPT-5 Nano
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -24,7 +25,7 @@ export default async function handler(req, res) {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-5-nano",  // your chosen model
+        model: "gpt-5-nano",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: message }
@@ -35,9 +36,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Extract assistant reply safely
     const reply = data.choices?.[0]?.message?.content || "Sorry, no response.";
-
     return res.status(200).json({ reply });
 
   } catch (err) {
