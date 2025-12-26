@@ -14,6 +14,7 @@ body{font-family:'Segoe UI',sans-serif;background:#fff;display:flex;justify-cont
 .message{max-width:85%;padding:10px 14px;border-radius:14px;font-size:15px;line-height:1.45;white-space:pre-wrap;}
 .user-msg{align-self:flex-end;background:#007aff;color:#fff;border-bottom-right-radius:4px;}
 .ai-msg{align-self:flex-start;background:#e5e5e5;color:#111;border-bottom-left-radius:4px;}
+.typing { font-style: italic; color: #555; }
 .bottom-bar{display:flex;gap:8px;padding:12px 14px;border-top:1px solid #e6e6e6;background:#fff;}
 .bottom-bar input{flex:1;border-radius:24px;border:1px solid #d0d0d0;padding:12px 15px;font-size:15px;}
 #sendBtn{background:#007aff;color:#fff;border:none;width:42px;height:42px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:17px;cursor:pointer;}
@@ -24,7 +25,6 @@ body{font-family:'Segoe UI',sans-serif;background:#fff;display:flex;justify-cont
 #panelFooter{padding:12px;border-top:1px solid #ccc;text-align:center;}
 #settingsModal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:280px;background:#fff;padding:20px 24px;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:none;z-index:20000;}
 .setting-item{margin-bottom:12px;font-size:15px;}
-.typing { font-style: italic; color: #555; }
 </style>
 </head>
 <body>
@@ -75,6 +75,7 @@ const chatArea = document.getElementById("chatArea");
 const sendBtn = document.getElementById("sendBtn");
 const chatInput = document.getElementById("chatInput");
 const aiModeSelect = document.getElementById("aiModeSelect");
+
 // ----------------- Panel & Settings -----------------
 document.getElementById("hamburger").onclick = () => {
   document.getElementById("panel").classList.toggle("active");
@@ -99,13 +100,6 @@ function addMessage(text, sender, extraClass = "") {
   return div;
 }
 
-function typeAIResponse(text) {
-  // Split text by newline and add each line as a separate message
-  text.split('\n').forEach(line => {
-    if(line.trim() !== '') addMessage(line, "ai");
-  });
-}
-
 // ----------------- New Chat -----------------
 document.getElementById("newChatBtn").onclick = () => {
   chatArea.innerHTML = "";
@@ -115,21 +109,26 @@ document.getElementById("newChatBtn").onclick = () => {
 // ----------------- Typing Indicator -----------------
 let typingDiv = null;
 
-// ----------------- Send to Serverless Function (GET) -----------------
+// ----------------- Send to Serverless GPT-5 Nano -----------------
 async function sendToAI(userMessage) {
-  // show typing
   typingDiv = addMessage("AI is typing...", "ai", "typing");
 
-  const query = userMessage;
   try {
-    // If you want to include AI mode as query param
-    const resp = await fetch(`/api/chat?q=${encodeURIComponent(query)}&mode=${aiModeSelect.value}`);
-    const data = await resp.json();
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: userMessage, mode: aiModeSelect.value })
+    });
+
+    const data = await res.json();
 
     if (typingDiv) typingDiv.remove();
 
-    const aiText = data.ai_response?.choices?.[0]?.message?.content || "No response";
-    typeAIResponse(aiText);
+    // Display AI response
+    const replyText = data.reply || "No response 😔";
+    replyText.split('\n').forEach(line => {
+      if (line.trim() !== "") addMessage(line, "ai");
+    });
 
   } catch (err) {
     console.error(err);
@@ -161,7 +160,6 @@ window.onload = () => {
   const saved = localStorage.getItem("chatHTML");
   if (saved) chatArea.innerHTML = saved;
 };
-
 </script>
 </body>
-      </html>
+</html>
