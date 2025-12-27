@@ -4,75 +4,109 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Simple AI Chat</title>
+
 <style>
 body {
   font-family: Arial, sans-serif;
   background: #f4f4f4;
+  margin: 0;
+  height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
+  align-items: stretch;
 }
+
 .container {
-  width: 90%;
-  max-width: 500px;
+  width: 100%;
+  max-width: 100%;
+  height: 100vh;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  height: 80vh;
-  overflow: hidden;
 }
+
 .chat {
   flex: 1;
-  padding: 10px;
+  padding: 10px 16px;
   overflow-y: auto;
+  padding-bottom: 90px; /* space for input bar */
 }
+
 .message {
   margin: 8px 0;
-  padding: 10px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
   max-width: 80%;
+  word-wrap: break-word;
 }
+
 .user {
   background: #007bff;
   color: white;
   align-self: flex-end;
 }
+
 .ai {
   background: #e0e0e0;
+  color: black;
   align-self: flex-start;
 }
-.input-area {
-  display: flex;
-  border-top: 1px solid #ddd;
-}
-input {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  outline: none;
-}
-button {
-  padding: 10px;
-  border: none;
-  background: #007bff;
-  color: white;
-  cursor: pointer;
-}
+
 .typing {
   font-style: italic;
   color: #555;
 }
+
+/* input bar */
+.input-area {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: #f9f9f9;
+  border-top: 1px solid #ddd;
+  position: sticky;
+  bottom: 0;
+  box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
+}
+
+/* textarea replaces input */
+textarea {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: 24px;
+  border: 1px solid #ccc;
+  outline: none;
+  font-size: 15px;
+  resize: none;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* round send button */
+.send-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: bold;
+}
 </style>
 </head>
+
 <body>
 <div class="container">
   <div id="chatArea" class="chat"></div>
+
   <div class="input-area">
-    <input id="userInput" type="text" placeholder="Type your message...">
-    <button id="sendBtn">Send</button>
+    <textarea id="userInput" placeholder="Type your message..." rows="1"></textarea>
+    <button id="sendBtn" class="send-btn">➤</button>
   </div>
 </div>
 
@@ -90,13 +124,20 @@ function addMessage(text, sender, extraClass = '') {
   return div;
 }
 
-// ----------------- Send Message -----------------
+/* AUTO-RESIZE textarea */
+userInput.addEventListener('input', () => {
+  userInput.style.height = 'auto';
+  userInput.style.height = userInput.scrollHeight + 'px';
+});
+
+/* SEND MESSAGE */
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
 
   addMessage(text, 'user');
   userInput.value = '';
+  userInput.style.height = 'auto'; // reset height after send
 
   const typingDiv = addMessage('AI is typing...', 'ai', 'typing');
 
@@ -105,9 +146,8 @@ async function sendMessage() {
     const data = await resp.json();
     const reply = data.reply || 'No response.';
 
-    typingDiv.remove(); // remove "AI is typing..."
+    typingDiv.remove();
 
-    // Typing animation
     let index = 0;
     const aiDiv = addMessage('', 'ai'); 
 
@@ -116,22 +156,27 @@ async function sendMessage() {
         aiDiv.textContent += reply.charAt(index);
         index++;
         chatArea.scrollTop = chatArea.scrollHeight;
-        setTimeout(typeNextChar, 20); // adjust speed here
+        setTimeout(typeNextChar, 20);
       }
     }
     typeNextChar();
 
   } catch (err) {
     typingDiv.remove();
-    addMessage('⚠️ Server error.', 'ai');
+    addMessage('⚠️ server error.', 'ai');
     console.error(err);
   }
 }
 
-// ----------------- Event Listeners -----------------
+/* send button */
 sendBtn.onclick = sendMessage;
-userInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendMessage();
+
+/* Enter = send | Shift+Enter = new line */
+userInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
 });
 </script>
 </body>
