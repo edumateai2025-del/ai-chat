@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Chat with IndexedDB + Structured Notes</title>
+<title>Enhanced AI Chat with IndexedDB + Sessions</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -15,6 +15,7 @@ body {
   align-items: stretch;
 }
 
+/* Container */
 .container {
   width: 100%;
   max-width: 100%;
@@ -46,7 +47,7 @@ body {
   display: none;
 }
 
-/* Chat */
+/* Chat area */
 .chat {
   flex: 1;
   padding: 10px 16px;
@@ -58,8 +59,9 @@ body {
   margin: 8px 0;
   padding: 10px 14px;
   border-radius: 12px;
-  max-width: 80%;
+  max-width: 90%;
   word-wrap: break-word;
+  line-height: 1.5;
 }
 
 .user {
@@ -72,8 +74,29 @@ body {
   background: #e0e0e0;
   color: black;
   align-self: flex-start;
-  font-weight: normal; /* Normal text for AI messages */
-  white-space: pre-wrap; /* Keep line breaks */
+}
+
+.ai h2 {
+  color: #007bff;
+  margin: 6px 0;
+}
+
+.ai p {
+  margin: 6px 0;
+}
+
+.ai pre {
+  background: #f4f4f4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: monospace;
+  margin: 6px 0;
+}
+
+.typing {
+  font-style: italic;
+  color: #555;
 }
 
 /* Input */
@@ -177,6 +200,21 @@ textarea {
 #optionsMenu div:hover {
   background: #f4f4f4;
 }
+
+/* Follow-up suggestions */
+.followup {
+  background: #007bff;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: inline-block;
+  margin: 4px 4px 0 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+.followup:hover {
+  background: #005bb5;
+}
 </style>
 </head>
 <body>
@@ -218,9 +256,9 @@ const sessionOptionsBtn = document.querySelector('.session-options');
 const optionsMenu = document.getElementById('optionsMenu');
 
 let db;
-let sessionId = null; 
+let sessionId = null;
 let sessionSaved = false;
-let aiTyping = false; // prevent multiple AI replies at the same time
+let aiTyping = false;
 
 // ===== IndexedDB =====
 const request = indexedDB.open("chatDB", 1);
@@ -242,10 +280,10 @@ hamburger.onclick = () => {
 };
 
 // ===== Add message UI =====
-function addMessage(html, sender) {
+function addMessageHTML(contentHTML, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
-  div.innerHTML = html; // allow HTML formatting
+  div.innerHTML = contentHTML;
   chatArea.appendChild(div);
   chatArea.scrollTop = chatArea.scrollHeight;
   return div;
@@ -260,7 +298,6 @@ userInput.addEventListener('input', () => {
 // ===== Save/load messages =====
 function saveMessage(role, content) {
   if (!sessionId) return;
-
   const tx = db.transaction("sessions", "readwrite");
   const store = tx.objectStore("sessions");
   const req = store.get(sessionId);
@@ -286,60 +323,98 @@ function loadMessages() {
   req.onsuccess = () => {
     chatArea.innerHTML = "";
     if (!req.result) return;
-    req.result.messages.forEach(m => addMessage(m.content, m.role));
+    req.result.messages.forEach(m => addMessageHTML(m.content, m.role));
     sessionOptionsBtn.style.display = 'inline';
   };
 }
 
+// ===== Generate AI formatted content =====
+function formatAIResponse(rawText) {
+  // Split into sections by double newlines
+  const sections = rawText.split("\n\n");
+  let html = "";
+  sections.forEach(sec => {
+    if(sec.trim() === "") return;
+    if(sec.includes(":") || sec.toLowerCase().includes("definition") || sec.toLowerCase().includes("formula")) {
+      html += `<h2>${sec}</h2>`;
+    } else if(sec.includes("=") || sec.includes("×") || sec.includes("÷")) {
+      html += `<pre>${sec}</pre>`;
+    } else {
+      html += `<p>${sec}</p>`;
+    }
+  });
+  return html;
+}
+
+// ===== Follow-up suggestions =====
+function addFollowupSuggestions(suggestions) {
+  suggestions.forEach(text => {
+    const span = document.createElement('span');
+    span.className = "followup";
+    span.textContent = text;
+    span.onclick = () => {
+      userInput.value = text;
+      sendMessage();
+    };
+    chatArea.appendChild(span);
+  });
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
 // ===== Send message =====
 async function sendMessage() {
-  if (aiTyping) return; // prevent multiple sends
   const text = userInput.value.trim();
-  if (!text) return;
+  if (!text || aiTyping) return;
 
+  // Create new session if not exists
   if (!sessionId) sessionId = Date.now().toString();
 
-  addMessage(text, 'user');
+  addMessageHTML(text, 'user');
   saveMessage('user', text);
   userInput.value = '';
   userInput.style.height = 'auto';
 
+  // AI typing flag
   aiTyping = true;
-  const typingDiv = addMessage('AI is typing...', 'ai');
+  const typingDiv = addMessageHTML('<i>AI is thinking...</i>', 'ai');
 
   try {
     const resp = await fetch(`/api/chat?q=${encodeURIComponent(text)}`);
     const data = await resp.json();
     let reply = data.reply || 'No response.';
-
     typingDiv.remove();
 
-    // Structure AI reply with headings, formulas, lists
-    reply = formatAIMessage(reply);
+    // Sentence-based typing
+    const sentences = reply.match(/[^.!?]+[.!?]?/g) || [reply];
+    let index = 0;
+    const aiDiv = addMessageHTML("", 'ai');
 
-    addMessage(reply, 'ai');
-    saveMessage('ai', reply);
+    function typeNextSentence() {
+      if(index < sentences.length) {
+        aiDiv.innerHTML += formatAIResponse(sentences[index]) + "<br>";
+        index++;
+        chatArea.scrollTop = chatArea.scrollHeight;
+        setTimeout(typeNextSentence, 500); // delay per sentence
+      } else {
+        aiTyping = false;
+        // Add follow-up suggestions
+        if(data.suggestions) addFollowupSuggestions(data.suggestions);
+      }
+    }
+    typeNextSentence();
 
-  } catch (err) {
+    saveMessage('ai', formatAIResponse(reply));
+
+  } catch(err) {
     typingDiv.remove();
-    addMessage('⚠️ no Internet.', 'ai');
-  } finally {
+    addMessageHTML('⚠️ No Internet.', 'ai');
     aiTyping = false;
   }
 }
 
-function formatAIMessage(text) {
-  // Simple formatting: headlines in blue, formulas in pre
-  return text
-    .replace(/(Gravity Formulas|Linear Motion|Types of Motion)/g, '<b style="color:#007bff;">$1</b>')
-    .replace(/\n/g, '<br>')
-    .replace(/\*/g, '×')
-    .replace(/\//g, '÷');
-}
-
 sendBtn.onclick = sendMessage;
-userInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+userInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
@@ -357,7 +432,7 @@ newChatBtn.onclick = () => {
 };
 
 function loadSessionList() {
-  if (!db) return;
+  if(!db) return;
   const tx = db.transaction("sessions", "readonly");
   const store = tx.objectStore("sessions");
   const req = store.getAll();
@@ -379,20 +454,20 @@ function loadSessionList() {
 }
 
 // ===== Options menu =====
-sessionOptionsBtn.onclick = (e) => {
+sessionOptionsBtn.onclick = () => {
   optionsMenu.style.display = 'block';
 };
 
-document.addEventListener('click', (e) => {
-  if (!optionsMenu.contains(e.target) && e.target !== sessionOptionsBtn) {
+document.addEventListener('click', e => {
+  if(!optionsMenu.contains(e.target) && e.target !== sessionOptionsBtn) {
     optionsMenu.style.display = 'none';
   }
 });
 
 // Actions
 document.getElementById('deleteSession').onclick = () => {
-  if (!sessionId) return;
-  const tx = db.transaction("sessions", "readwrite");
+  if(!sessionId) return;
+  const tx = db.transaction("sessions","readwrite");
   const store = tx.objectStore("sessions");
   store.delete(sessionId);
   chatArea.innerHTML = '';
@@ -404,15 +479,15 @@ document.getElementById('deleteSession').onclick = () => {
 };
 
 document.getElementById('renameSession').onclick = () => {
-  if (!sessionId) return;
+  if(!sessionId) return;
   const newName = prompt("Enter new session name:", "Chat");
-  if (!newName) return;
-  const tx = db.transaction("sessions", "readwrite");
+  if(!newName) return;
+  const tx = db.transaction("sessions","readwrite");
   const store = tx.objectStore("sessions");
   const req = store.get(sessionId);
   req.onsuccess = () => {
     const session = req.result;
-    if (!session) return;
+    if(!session) return;
     session.sessionName = newName;
     store.put(session);
     loadSessionList();
@@ -421,9 +496,10 @@ document.getElementById('renameSession').onclick = () => {
 };
 
 document.getElementById('pinSession').onclick = () => {
-  alert("Pin feature coming soon!");
+  alert("Pin feature coming in version 1.1!");
   optionsMenu.style.display = 'none';
 };
 </script>
+
 </body>
 </html>
