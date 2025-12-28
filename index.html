@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Chat with IndexedDB + Sessions</title>
+<title>AI Chat with Structured Formulas</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -44,7 +44,7 @@ body {
 .session-options {
   font-size: 22px;
   cursor: pointer;
-  display: none;
+  display: none; /* show only when session loaded */
 }
 
 /* Chat */
@@ -61,6 +61,7 @@ body {
   border-radius: 12px;
   max-width: 80%;
   word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .user {
@@ -73,11 +74,8 @@ body {
   background: #e0e0e0;
   color: black;
   align-self: flex-start;
-}
-
-.typing {
-  font-style: italic;
-  color: #555;
+  font-weight: bold;
+  font-family: monospace;
 }
 
 /* Input */
@@ -222,9 +220,9 @@ const sessionOptionsBtn = document.querySelector('.session-options');
 const optionsMenu = document.getElementById('optionsMenu');
 
 let db;
-let sessionId = null;
-let sessionSaved = false;
-let aiBusy = false;
+let sessionId = null; 
+let sessionSaved = false; 
+let aiTyping = false; // track if AI is currently typing
 
 // ===== IndexedDB =====
 const request = indexedDB.open("chatDB", 1);
@@ -245,11 +243,19 @@ hamburger.onclick = () => {
   sessionPanel.classList.toggle('visible');
 };
 
-// ===== Add message UI (formatted) =====
+// ===== Add message UI =====
 function addMessage(text, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
-  div.innerHTML = text.replace(/\n/g, "<br>");
+  
+  if (sender === 'ai') {
+    // Replace * and / with × and ÷
+    text = text.replace(/\*/g, '×').replace(/\//g, '÷');
+    div.innerHTML = text; // allow HTML formatting for bold, pre, br
+  } else {
+    div.textContent = text;
+  }
+
   chatArea.appendChild(div);
   chatArea.scrollTop = chatArea.scrollHeight;
   return div;
@@ -262,7 +268,7 @@ userInput.addEventListener('input', () => {
 });
 
 // ===== Save/load messages =====
-function saveMessage(role, content, autoName = null) {
+function saveMessage(role, content) {
   if (!sessionId) return;
 
   const tx = db.transaction("sessions", "readwrite");
@@ -270,8 +276,7 @@ function saveMessage(role, content, autoName = null) {
   const req = store.get(sessionId);
 
   req.onsuccess = () => {
-    const session = req.result || { sessionId, messages: [], sessionName: autoName || "Chat " + sessionId };
-    if (autoName && !session.sessionName) session.sessionName = autoName;
+    const session = req.result || { sessionId, messages: [] };
     session.messages.push({ role, content });
     if (session.messages.length > 200) session.messages = session.messages.slice(-200);
     store.put(session);
@@ -298,52 +303,51 @@ function loadMessages() {
 
 // ===== Send message =====
 async function sendMessage() {
-  if (aiBusy) return; // block multiple messages
   const text = userInput.value.trim();
-  if (!text) return;
+  if (!text || aiTyping) return;
 
   // Create new session if not exists
   if (!sessionId) sessionId = Date.now().toString();
 
   addMessage(text, 'user');
-
-  // Auto-generate session name for first message
-  const autoName = "Explanation of " + (text.length > 20 ? text.slice(0,20)+'...' : text);
-  saveMessage('user', text, autoName);
-
+  saveMessage('user', text);
   userInput.value = '';
   userInput.style.height = 'auto';
 
-  aiBusy = true;
+  // AI starts typing
+  aiTyping = true;
   const typingDiv = addMessage('AI is typing...', 'ai');
 
   try {
     const resp = await fetch(`/api/chat?q=${encodeURIComponent(text)}`);
     const data = await resp.json();
-    const reply = data.reply || 'No response.';
+    let reply = data.reply || 'No response.';
+    
+    // Replace * and / with × and ÷ for formulas
+    reply = reply.replace(/\*/g, '×').replace(/\//g, '÷');
+
     typingDiv.remove();
 
-    let index = 0;
     const aiDiv = addMessage('', 'ai');
+    let index = 0;
 
     function typeNextChar() {
       if (index < reply.length) {
-        aiDiv.innerHTML += reply.charAt(index).replace(/\n/g,"<br>");
+        aiDiv.innerHTML += reply.charAt(index);
         index++;
         chatArea.scrollTop = chatArea.scrollHeight;
-        setTimeout(typeNextChar, 20);
+        setTimeout(typeNextChar, 10);
       } else {
-        aiBusy = false;
+        saveMessage('ai', reply);
+        aiTyping = false; // AI finished typing
       }
     }
     typeNextChar();
 
-    saveMessage('ai', reply);
-
-  } catch(err) {
+  } catch (err) {
     typingDiv.remove();
     addMessage('⚠️ no Internet.', 'ai');
-    aiBusy = false;
+    aiTyping = false;
   }
 }
 
@@ -376,7 +380,8 @@ function loadSessionList() {
     sessionListDiv.innerHTML = '';
     req.result.forEach(sess => {
       const div = document.createElement('div');
-      div.textContent = sess.sessionName || ("Chat " + sess.sessionId);
+      const displayName = sess.sessionName || "Chat " + sess.sessionId;
+      div.textContent = displayName;
       div.onclick = () => {
         sessionId = sess.sessionId;
         sessionSaved = true;
@@ -430,11 +435,11 @@ document.getElementById('renameSession').onclick = () => {
   optionsMenu.style.display = 'none';
 };
 
-// Pin feature
+// Pin feature placeholder
 document.getElementById('pinSession').onclick = () => {
   alert("Pin feature coming soon!");
   optionsMenu.style.display = 'none';
 };
 </script>
 </body>
-  </html>
+</html>
