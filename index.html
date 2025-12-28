@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Chat with Structured Formulas</title>
+<title>AI Chat with IndexedDB + Structured Notes</title>
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -15,7 +15,6 @@ body {
   align-items: stretch;
 }
 
-/* Container */
 .container {
   width: 100%;
   max-width: 100%;
@@ -44,7 +43,7 @@ body {
 .session-options {
   font-size: 22px;
   cursor: pointer;
-  display: none; /* show only when session loaded */
+  display: none;
 }
 
 /* Chat */
@@ -61,7 +60,6 @@ body {
   border-radius: 12px;
   max-width: 80%;
   word-wrap: break-word;
-  white-space: pre-wrap;
 }
 
 .user {
@@ -74,8 +72,8 @@ body {
   background: #e0e0e0;
   color: black;
   align-self: flex-start;
-  font-weight: bold;
-  font-family: monospace;
+  font-weight: normal; /* Normal text for AI messages */
+  white-space: pre-wrap; /* Keep line breaks */
 }
 
 /* Input */
@@ -221,8 +219,8 @@ const optionsMenu = document.getElementById('optionsMenu');
 
 let db;
 let sessionId = null; 
-let sessionSaved = false; 
-let aiTyping = false; // track if AI is currently typing
+let sessionSaved = false;
+let aiTyping = false; // prevent multiple AI replies at the same time
 
 // ===== IndexedDB =====
 const request = indexedDB.open("chatDB", 1);
@@ -244,18 +242,10 @@ hamburger.onclick = () => {
 };
 
 // ===== Add message UI =====
-function addMessage(text, sender) {
+function addMessage(html, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
-  
-  if (sender === 'ai') {
-    // Replace * and / with × and ÷
-    text = text.replace(/\*/g, '×').replace(/\//g, '÷');
-    div.innerHTML = text; // allow HTML formatting for bold, pre, br
-  } else {
-    div.textContent = text;
-  }
-
+  div.innerHTML = html; // allow HTML formatting
   chatArea.appendChild(div);
   chatArea.scrollTop = chatArea.scrollHeight;
   return div;
@@ -276,7 +266,7 @@ function saveMessage(role, content) {
   const req = store.get(sessionId);
 
   req.onsuccess = () => {
-    const session = req.result || { sessionId, messages: [] };
+    const session = req.result || { sessionId, messages: [], sessionName: "Chat " + sessionId };
     session.messages.push({ role, content });
     if (session.messages.length > 200) session.messages = session.messages.slice(-200);
     store.put(session);
@@ -303,10 +293,10 @@ function loadMessages() {
 
 // ===== Send message =====
 async function sendMessage() {
+  if (aiTyping) return; // prevent multiple sends
   const text = userInput.value.trim();
-  if (!text || aiTyping) return;
+  if (!text) return;
 
-  // Create new session if not exists
   if (!sessionId) sessionId = Date.now().toString();
 
   addMessage(text, 'user');
@@ -314,7 +304,6 @@ async function sendMessage() {
   userInput.value = '';
   userInput.style.height = 'auto';
 
-  // AI starts typing
   aiTyping = true;
   const typingDiv = addMessage('AI is typing...', 'ai');
 
@@ -322,33 +311,30 @@ async function sendMessage() {
     const resp = await fetch(`/api/chat?q=${encodeURIComponent(text)}`);
     const data = await resp.json();
     let reply = data.reply || 'No response.';
-    
-    // Replace * and / with × and ÷ for formulas
-    reply = reply.replace(/\*/g, '×').replace(/\//g, '÷');
 
     typingDiv.remove();
 
-    const aiDiv = addMessage('', 'ai');
-    let index = 0;
+    // Structure AI reply with headings, formulas, lists
+    reply = formatAIMessage(reply);
 
-    function typeNextChar() {
-      if (index < reply.length) {
-        aiDiv.innerHTML += reply.charAt(index);
-        index++;
-        chatArea.scrollTop = chatArea.scrollHeight;
-        setTimeout(typeNextChar, 10);
-      } else {
-        saveMessage('ai', reply);
-        aiTyping = false; // AI finished typing
-      }
-    }
-    typeNextChar();
+    addMessage(reply, 'ai');
+    saveMessage('ai', reply);
 
   } catch (err) {
     typingDiv.remove();
     addMessage('⚠️ no Internet.', 'ai');
+  } finally {
     aiTyping = false;
   }
+}
+
+function formatAIMessage(text) {
+  // Simple formatting: headlines in blue, formulas in pre
+  return text
+    .replace(/(Gravity Formulas|Linear Motion|Types of Motion)/g, '<b style="color:#007bff;">$1</b>')
+    .replace(/\n/g, '<br>')
+    .replace(/\*/g, '×')
+    .replace(/\//g, '÷');
 }
 
 sendBtn.onclick = sendMessage;
@@ -380,8 +366,7 @@ function loadSessionList() {
     sessionListDiv.innerHTML = '';
     req.result.forEach(sess => {
       const div = document.createElement('div');
-      const displayName = sess.sessionName || "Chat " + sess.sessionId;
-      div.textContent = displayName;
+      div.textContent = sess.sessionName || "Chat " + sess.sessionId;
       div.onclick = () => {
         sessionId = sess.sessionId;
         sessionSaved = true;
@@ -435,7 +420,6 @@ document.getElementById('renameSession').onclick = () => {
   optionsMenu.style.display = 'none';
 };
 
-// Pin feature placeholder
 document.getElementById('pinSession').onclick = () => {
   alert("Pin feature coming soon!");
   optionsMenu.style.display = 'none';
