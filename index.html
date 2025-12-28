@@ -1,11 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simple AI Chat</title>
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Simple AI Chat with IndexedDB</title>  
 
-<style>
+<style>  
 body {
   font-family: Arial, sans-serif;
   background: #f4f4f4;
@@ -29,7 +29,7 @@ body {
   flex: 1;
   padding: 10px 16px;
   overflow-y: auto;
-  padding-bottom: 90px; /* space for input bar */
+  padding-bottom: 90px;
 }
 
 .message {
@@ -57,7 +57,6 @@ body {
   color: #555;
 }
 
-/* input bar */
 .input-area {
   display: flex;
   align-items: center;
@@ -69,7 +68,6 @@ body {
   box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
 }
 
-/* textarea replaces input */
 textarea {
   flex: 1;
   padding: 14px 16px;
@@ -82,7 +80,6 @@ textarea {
   overflow-y: auto;
 }
 
-/* round send button */
 .send-btn {
   width: 46px;
   height: 46px;
@@ -115,6 +112,56 @@ const chatArea = document.getElementById('chatArea');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
 
+let db;
+let sessionId = "defaultSession";
+
+// ===== IndexedDB Setup =====
+const request = indexedDB.open("chatDB", 1);
+
+request.onupgradeneeded = e => {
+  db = e.target.result;
+  if (!db.objectStoreNames.contains("sessions")) {
+    db.createObjectStore("sessions", { keyPath: "sessionId" });
+  }
+};
+
+request.onsuccess = e => {
+  db = e.target.result;
+  loadMessages();
+};
+
+request.onerror = e => console.error("IndexedDB error:", e);
+
+// ===== Save messages =====
+function saveMessage(role, content) {
+  const tx = db.transaction("sessions", "readwrite");
+  const store = tx.objectStore("sessions");
+  const req = store.get(sessionId);
+
+  req.onsuccess = () => {
+    const session = req.result || { sessionId, messages: [] };
+    session.messages.push({ role, content });
+    if (session.messages.length > 200) session.messages = session.messages.slice(-200);
+    store.put(session);
+  };
+}
+
+// ===== Load messages FIXED =====
+function loadMessages() {
+  const tx = db.transaction("sessions", "readonly");
+  const store = tx.objectStore("sessions");
+  const req = store.get(sessionId);
+
+  req.onsuccess = () => {
+    if (!req.result) return;
+    chatArea.innerHTML = "";
+    
+    // *** FIXED: display correct order ***
+    req.result.messages.forEach(m => addMessage(m.content, m.role));
+  };
+}
+
+// ===== Add message to UI =====
 function addMessage(text, sender, extraClass = '') {
   const div = document.createElement('div');
   div.className = `message ${sender} ${extraClass}`;
@@ -124,20 +171,21 @@ function addMessage(text, sender, extraClass = '') {
   return div;
 }
 
-/* AUTO-RESIZE textarea */
+// ===== Auto-resize text =====
 userInput.addEventListener('input', () => {
   userInput.style.height = 'auto';
   userInput.style.height = userInput.scrollHeight + 'px';
 });
 
-/* SEND MESSAGE */
+// ===== Send =====
 async function sendMessage() {
   const text = userInput.value.trim();
   if (!text) return;
 
   addMessage(text, 'user');
+  saveMessage('user', text);
   userInput.value = '';
-  userInput.style.height = 'auto'; // reset height after send
+  userInput.style.height = 'auto';
 
   const typingDiv = addMessage('AI is typing...', 'ai', 'typing');
 
@@ -149,7 +197,7 @@ async function sendMessage() {
     typingDiv.remove();
 
     let index = 0;
-    const aiDiv = addMessage('', 'ai'); 
+    const aiDiv = addMessage('', 'ai');
 
     function typeNextChar() {
       if (index < reply.length) {
@@ -161,17 +209,16 @@ async function sendMessage() {
     }
     typeNextChar();
 
+    saveMessage('ai', reply);
+
   } catch (err) {
     typingDiv.remove();
-    addMessage('⚠️ server error.', 'ai');
+    addMessage('⚠️ no Internet.', 'ai');
     console.error(err);
   }
 }
 
-/* send button */
 sendBtn.onclick = sendMessage;
-
-/* Enter = send | Shift+Enter = new line */
 userInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
