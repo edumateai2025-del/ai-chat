@@ -222,8 +222,9 @@ const sessionOptionsBtn = document.querySelector('.session-options');
 const optionsMenu = document.getElementById('optionsMenu');
 
 let db;
-let sessionId = null; 
+let sessionId = null;
 let sessionSaved = false;
+let aiBusy = false;
 
 // ===== IndexedDB =====
 const request = indexedDB.open("chatDB", 1);
@@ -244,11 +245,11 @@ hamburger.onclick = () => {
   sessionPanel.classList.toggle('visible');
 };
 
-// ===== Add message =====
+// ===== Add message UI (formatted) =====
 function addMessage(text, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
-  div.textContent = text;
+  div.innerHTML = text.replace(/\n/g, "<br>");
   chatArea.appendChild(div);
   chatArea.scrollTop = chatArea.scrollHeight;
   return div;
@@ -260,21 +261,18 @@ userInput.addEventListener('input', () => {
   userInput.style.height = userInput.scrollHeight + 'px';
 });
 
-// ===== Save message =====
-function saveMessage(role, content, sessionName = null) {
-  if (!sessionId) {
-    sessionId = Date.now().toString();
-  }
+// ===== Save/load messages =====
+function saveMessage(role, content, autoName = null) {
+  if (!sessionId) return;
+
   const tx = db.transaction("sessions", "readwrite");
   const store = tx.objectStore("sessions");
   const req = store.get(sessionId);
 
   req.onsuccess = () => {
-    let session = req.result || { sessionId, messages: [], sessionName: '' };
+    const session = req.result || { sessionId, messages: [], sessionName: autoName || "Chat " + sessionId };
+    if (autoName && !session.sessionName) session.sessionName = autoName;
     session.messages.push({ role, content });
-    if (!session.sessionName && sessionName) {
-      session.sessionName = sessionName;
-    }
     if (session.messages.length > 200) session.messages = session.messages.slice(-200);
     store.put(session);
     if (!sessionSaved) {
@@ -284,7 +282,6 @@ function saveMessage(role, content, sessionName = null) {
   };
 }
 
-// ===== Load messages =====
 function loadMessages() {
   if (!sessionId) return;
   const tx = db.transaction("sessions", "readonly");
@@ -301,14 +298,23 @@ function loadMessages() {
 
 // ===== Send message =====
 async function sendMessage() {
+  if (aiBusy) return; // block multiple messages
   const text = userInput.value.trim();
   if (!text) return;
 
+  // Create new session if not exists
+  if (!sessionId) sessionId = Date.now().toString();
+
   addMessage(text, 'user');
+
+  // Auto-generate session name for first message
+  const autoName = "Explanation of " + (text.length > 20 ? text.slice(0,20)+'...' : text);
+  saveMessage('user', text, autoName);
 
   userInput.value = '';
   userInput.style.height = 'auto';
 
+  aiBusy = true;
   const typingDiv = addMessage('AI is typing...', 'ai');
 
   try {
@@ -319,39 +325,37 @@ async function sendMessage() {
 
     let index = 0;
     const aiDiv = addMessage('', 'ai');
+
     function typeNextChar() {
       if (index < reply.length) {
-        aiDiv.textContent += reply.charAt(index);
+        aiDiv.innerHTML += reply.charAt(index).replace(/\n/g,"<br>");
         index++;
         chatArea.scrollTop = chatArea.scrollHeight;
         setTimeout(typeNextChar, 20);
+      } else {
+        aiBusy = false;
       }
     }
     typeNextChar();
 
-    // Set session title automatically
-    if (!sessionSaved) {
-      const shortText = text.length > 20 ? text.slice(0,20)+'...' : text;
-      saveMessage('ai', reply, "Explanation of " + shortText);
-    } else {
-      saveMessage('ai', reply);
-    }
+    saveMessage('ai', reply);
 
   } catch(err) {
     typingDiv.remove();
     addMessage('⚠️ no Internet.', 'ai');
+    aiBusy = false;
   }
 }
 
 sendBtn.onclick = sendMessage;
-userInput.addEventListener('keydown', e => {
+userInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
 });
 
-// ===== New Chat =====
+// ===== Session panel =====
 newChatBtn.onclick = () => {
   chatArea.innerHTML = '';
   userInput.value = '';
@@ -362,7 +366,6 @@ newChatBtn.onclick = () => {
   sessionPanel.classList.remove('visible');
 };
 
-// ===== Load session list =====
 function loadSessionList() {
   if (!db) return;
   const tx = db.transaction("sessions", "readonly");
@@ -372,9 +375,8 @@ function loadSessionList() {
   req.onsuccess = () => {
     sessionListDiv.innerHTML = '';
     req.result.forEach(sess => {
-      if (!sess.sessionName) return; // skip empty sessions
       const div = document.createElement('div');
-      div.textContent = sess.sessionName;
+      div.textContent = sess.sessionName || ("Chat " + sess.sessionId);
       div.onclick = () => {
         sessionId = sess.sessionId;
         sessionSaved = true;
@@ -387,17 +389,17 @@ function loadSessionList() {
 }
 
 // ===== Options menu =====
-sessionOptionsBtn.onclick = () => {
+sessionOptionsBtn.onclick = (e) => {
   optionsMenu.style.display = 'block';
 };
 
-document.addEventListener('click', e => {
+document.addEventListener('click', (e) => {
   if (!optionsMenu.contains(e.target) && e.target !== sessionOptionsBtn) {
     optionsMenu.style.display = 'none';
   }
 });
 
-// ===== Actions =====
+// Actions
 document.getElementById('deleteSession').onclick = () => {
   if (!sessionId) return;
   const tx = db.transaction("sessions", "readwrite");
@@ -428,11 +430,11 @@ document.getElementById('renameSession').onclick = () => {
   optionsMenu.style.display = 'none';
 };
 
+// Pin feature
 document.getElementById('pinSession').onclick = () => {
   alert("Pin feature coming soon!");
   optionsMenu.style.display = 'none';
 };
 </script>
-
 </body>
-</html>
+  </html>
