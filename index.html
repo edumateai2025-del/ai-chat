@@ -3,63 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Enhanced AI Chat with IndexedDB + Sessions</title>
+<title>Lenovox AI Smart Tutor</title>
 <style>
 body {
   font-family: Arial, sans-serif;
   background: #f4f4f4;
   margin: 0;
-  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: stretch;
+  height: 100vh;
 }
 
 /* Container */
 .container {
   width: 100%;
-  max-width: 100%;
+  max-width: 600px;
   height: 100vh;
   background: #fff;
   display: flex;
   flex-direction: column;
   position: relative;
-}
-
-/* Top bar */
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 16px;
-  background: #fff;
-  border-bottom: 1px solid #ddd;
-}
-
-.hamburger {
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.session-options {
-  font-size: 22px;
-  cursor: pointer;
-  display: none;
+  box-shadow: 0 0 20px rgba(0,0,0,0.05);
 }
 
 /* Chat area */
 .chat {
   flex: 1;
-  padding: 10px 16px;
+  padding: 16px;
   overflow-y: auto;
   background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .message {
-  margin: 8px 0;
-  padding: 10px 14px;
-  border-radius: 12px;
   max-width: 90%;
+  padding: 12px 16px;
+  border-radius: 16px;
   word-wrap: break-word;
   line-height: 1.5;
 }
@@ -76,44 +58,43 @@ body {
   align-self: flex-start;
 }
 
-.ai h2 {
-  color: #007bff;
-  margin: 6px 0;
+.ai .ai-text {
+  margin-bottom: 8px;
 }
 
-.ai p {
-  margin: 6px 0;
-}
-
-.ai pre {
-  background: #f4f4f4;
-  padding: 6px 10px;
-  border-radius: 6px;
+.ai-images {
+  display: flex;
+  gap: 8px;
   overflow-x: auto;
-  font-family: monospace;
-  margin: 6px 0;
 }
 
-.typing {
-  font-style: italic;
-  color: #555;
+.ai-images img {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-/* Input */
+.ai-images img.error {
+  background: #ccc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Input area */
 .input-area {
   display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  background: #f9f9f9;
+  padding: 12px 16px;
   border-top: 1px solid #ddd;
-  position: sticky;
-  bottom: 0;
-  box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
+  background: #f9f9f9;
 }
 
 textarea {
   flex: 1;
-  padding: 14px 16px;
+  padding: 12px 16px;
   border-radius: 24px;
   border: 1px solid #ccc;
   outline: none;
@@ -135,132 +116,36 @@ textarea {
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  font-weight: bold;
+  margin-left: 8px;
 }
 
-/* Side Panel */
-#sessionPanel {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 260px;
-  height: 100%;
-  background: #fff;
-  border-right: 1px solid #ddd;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.18);
-  transform: translateX(-100%);
-  transition: 0.3s ease;
-  z-index: 1000;
-  padding: 10px;
-  overflow-y: auto;
-}
-
-#sessionPanel.visible {
-  transform: translateX(0);
-}
-
-#newChat {
-  padding: 10px;
-  border-radius: 6px;
-  background: #f4f4f4;
-  cursor: pointer;
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-#sessionList div {
-  padding: 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-bottom: 6px;
-  background: #fafafa;
-}
-
-#sessionList div:hover {
-  background: #e9e9e9;
-}
-
-/* Options menu */
-#optionsMenu {
-  position: absolute;
-  top: 40px;
-  right: 20px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  display: none;
-  z-index: 2000;
-}
-
-#optionsMenu div {
-  padding: 10px 14px;
-  cursor: pointer;
-}
-
-#optionsMenu div:hover {
-  background: #f4f4f4;
-}
-
-/* Follow-up suggestions */
-.followup {
-  background: #007bff;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 6px;
-  display: inline-block;
-  margin: 4px 4px 0 0;
-  cursor: pointer;
-  font-size: 13px;
-}
-.followup:hover {
-  background: #005bb5;
+/* Typing animation */
+.typing {
+  font-style: italic;
+  color: #555;
 }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="top-bar">
-    <span class="hamburger">&#9776;</span>
-    <span class="session-options">&#8942;</span>
-  </div>
-
   <div id="chatArea" class="chat"></div>
 
   <div class="input-area">
-    <textarea id="userInput" placeholder="Type your message..." rows="1"></textarea>
+    <textarea id="userInput" placeholder="Ask your question..." rows="1"></textarea>
     <button id="sendBtn" class="send-btn">➤</button>
   </div>
-</div>
-
-<div id="sessionPanel">
-  <div id="newChat">+ New Chat</div>
-  <div id="sessionList"></div>
-</div>
-
-<div id="optionsMenu">
-  <div id="pinSession">Pin</div>
-  <div id="renameSession">Rename</div>
-  <div id="deleteSession">Delete</div>
 </div>
 
 <script>
 const chatArea = document.getElementById('chatArea');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
-const sessionPanel = document.getElementById('sessionPanel');
-const hamburger = document.querySelector('.hamburger');
-const newChatBtn = document.getElementById('newChat');
-const sessionListDiv = document.getElementById('sessionList');
-const sessionOptionsBtn = document.querySelector('.session-options');
-const optionsMenu = document.getElementById('optionsMenu');
 
 let db;
-let sessionId = null;
-let sessionSaved = false;
-let aiTyping = false;
+let sessionId = Date.now().toString();
 
-// ===== IndexedDB =====
+// ===== IndexedDB setup =====
 const request = indexedDB.open("chatDB", 1);
 request.onupgradeneeded = e => {
   db = e.target.result;
@@ -268,25 +153,72 @@ request.onupgradeneeded = e => {
     db.createObjectStore("sessions", { keyPath: "sessionId" });
   }
 };
-request.onsuccess = e => {
-  db = e.target.result;
-  loadSessionList();
-};
+request.onsuccess = e => { db = e.target.result; loadMessages(); };
 request.onerror = e => console.error("IndexedDB error:", e);
 
-// ===== Hamburger toggle =====
-hamburger.onclick = () => {
-  sessionPanel.classList.toggle('visible');
-};
+// ===== Save & Load =====
+function saveMessage(role, content, images=[]) {
+  const tx = db.transaction("sessions","readwrite");
+  const store = tx.objectStore("sessions");
+  const req = store.get(sessionId);
+  req.onsuccess = () => {
+    const session = req.result || { sessionId, messages: [] };
+    session.messages.push({ role, content, images });
+    if(session.messages.length>200) session.messages = session.messages.slice(-200);
+    store.put(session);
+  };
+}
 
-// ===== Add message UI =====
-function addMessageHTML(contentHTML, sender) {
+function loadMessages() {
+  const tx = db.transaction("sessions","readonly");
+  const store = tx.objectStore("sessions");
+  const req = store.get(sessionId);
+  req.onsuccess = () => {
+    chatArea.innerHTML = '';
+    if(!req.result) return;
+    req.result.messages.forEach(msg => addMessage(msg.role, msg.content, msg.images));
+  };
+}
+
+// ===== Add message to UI =====
+function addMessage(role, text, images=[]) {
   const div = document.createElement('div');
-  div.className = `message ${sender}`;
-  div.innerHTML = contentHTML;
+  div.className = `message ${role}`;
+  
+  if(role === 'ai') {
+    const p = document.createElement('div');
+    p.className = 'ai-text';
+    div.appendChild(p);
+
+    // Typewriter effect
+    let i = 0;
+    const typeInterval = setInterval(() => {
+      p.textContent += text.charAt(i);
+      i++;
+      chatArea.scrollTop = chatArea.scrollHeight;
+      if(i >= text.length) clearInterval(typeInterval);
+    }, 20);
+
+    if(images && images.length > 0) {
+      const imgDiv = document.createElement('div');
+      imgDiv.className = 'ai-images';
+      images.forEach(src => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = "Related image";
+        img.onerror = () => { img.src=""; img.alt="Failed to load"; img.classList.add('error'); };
+        img.onclick = () => window.open(src,"_blank");
+        imgDiv.appendChild(img);
+      });
+      div.appendChild(imgDiv);
+    }
+
+  } else {
+    div.textContent = text;
+  }
+
   chatArea.appendChild(div);
   chatArea.scrollTop = chatArea.scrollHeight;
-  return div;
 }
 
 // ===== Auto-resize textarea =====
@@ -295,119 +227,34 @@ userInput.addEventListener('input', () => {
   userInput.style.height = userInput.scrollHeight + 'px';
 });
 
-// ===== Save/load messages =====
-function saveMessage(role, content) {
-  if (!sessionId) return;
-  const tx = db.transaction("sessions", "readwrite");
-  const store = tx.objectStore("sessions");
-  const req = store.get(sessionId);
-
-  req.onsuccess = () => {
-    const session = req.result || { sessionId, messages: [], sessionName: "Chat " + sessionId };
-    session.messages.push({ role, content });
-    if (session.messages.length > 200) session.messages = session.messages.slice(-200);
-    store.put(session);
-    if (!sessionSaved) {
-      sessionSaved = true;
-      loadSessionList();
-    }
-  };
-}
-
-function loadMessages() {
-  if (!sessionId) return;
-  const tx = db.transaction("sessions", "readonly");
-  const store = tx.objectStore("sessions");
-  const req = store.get(sessionId);
-
-  req.onsuccess = () => {
-    chatArea.innerHTML = "";
-    if (!req.result) return;
-    req.result.messages.forEach(m => addMessageHTML(m.content, m.role));
-    sessionOptionsBtn.style.display = 'inline';
-  };
-}
-
-// ===== Generate AI formatted content =====
-function formatAIResponse(rawText) {
-  // Split into sections by double newlines
-  const sections = rawText.split("\n\n");
-  let html = "";
-  sections.forEach(sec => {
-    if(sec.trim() === "") return;
-    if(sec.includes(":") || sec.toLowerCase().includes("definition") || sec.toLowerCase().includes("formula")) {
-      html += `<h2>${sec}</h2>`;
-    } else if(sec.includes("=") || sec.includes("×") || sec.includes("÷")) {
-      html += `<pre>${sec}</pre>`;
-    } else {
-      html += `<p>${sec}</p>`;
-    }
-  });
-  return html;
-}
-
-// ===== Follow-up suggestions =====
-function addFollowupSuggestions(suggestions) {
-  suggestions.forEach(text => {
-    const span = document.createElement('span');
-    span.className = "followup";
-    span.textContent = text;
-    span.onclick = () => {
-      userInput.value = text;
-      sendMessage();
-    };
-    chatArea.appendChild(span);
-  });
-  chatArea.scrollTop = chatArea.scrollHeight;
-}
-
 // ===== Send message =====
+let aiTyping = false;
 async function sendMessage() {
   const text = userInput.value.trim();
-  if (!text || aiTyping) return;
+  if(!text || aiTyping) return;
 
-  // Create new session if not exists
-  if (!sessionId) sessionId = Date.now().toString();
-
-  addMessageHTML(text, 'user');
+  addMessage('user', text);
   saveMessage('user', text);
   userInput.value = '';
   userInput.style.height = 'auto';
 
-  // AI typing flag
   aiTyping = true;
-  const typingDiv = addMessageHTML('<i>AI is thinking...</i>', 'ai');
+  addMessage('ai', 'AI is thinking...');
 
   try {
     const resp = await fetch(`/api/chat?q=${encodeURIComponent(text)}`);
     const data = await resp.json();
-    let reply = data.reply || 'No response.';
-    typingDiv.remove();
+    const lastAI = chatArea.querySelector('.message.ai:last-child');
+    if(lastAI) lastAI.remove();
 
-    // Sentence-based typing
-    const sentences = reply.match(/[^.!?]+[.!?]?/g) || [reply];
-    let index = 0;
-    const aiDiv = addMessageHTML("", 'ai');
-
-    function typeNextSentence() {
-      if(index < sentences.length) {
-        aiDiv.innerHTML += formatAIResponse(sentences[index]) + "<br>";
-        index++;
-        chatArea.scrollTop = chatArea.scrollHeight;
-        setTimeout(typeNextSentence, 500); // delay per sentence
-      } else {
-        aiTyping = false;
-        // Add follow-up suggestions
-        if(data.suggestions) addFollowupSuggestions(data.suggestions);
-      }
-    }
-    typeNextSentence();
-
-    saveMessage('ai', formatAIResponse(reply));
+    addMessage('ai', data.text, data.images || []);
+    saveMessage('ai', data.text, data.images || []);
 
   } catch(err) {
-    typingDiv.remove();
-    addMessageHTML('⚠️ No Internet.', 'ai');
+    console.error(err);
+    const lastAI = chatArea.querySelector('.message.ai:last-child');
+    if(lastAI) lastAI.textContent = "⚠️ Error fetching AI response.";
+  } finally {
     aiTyping = false;
   }
 }
@@ -419,86 +266,6 @@ userInput.addEventListener('keydown', e => {
     sendMessage();
   }
 });
-
-// ===== Session panel =====
-newChatBtn.onclick = () => {
-  chatArea.innerHTML = '';
-  userInput.value = '';
-  userInput.style.height = 'auto';
-  sessionId = null;
-  sessionSaved = false;
-  sessionOptionsBtn.style.display = 'none';
-  sessionPanel.classList.remove('visible');
-};
-
-function loadSessionList() {
-  if(!db) return;
-  const tx = db.transaction("sessions", "readonly");
-  const store = tx.objectStore("sessions");
-  const req = store.getAll();
-
-  req.onsuccess = () => {
-    sessionListDiv.innerHTML = '';
-    req.result.forEach(sess => {
-      const div = document.createElement('div');
-      div.textContent = sess.sessionName || "Chat " + sess.sessionId;
-      div.onclick = () => {
-        sessionId = sess.sessionId;
-        sessionSaved = true;
-        loadMessages();
-        sessionPanel.classList.remove('visible');
-      };
-      sessionListDiv.appendChild(div);
-    });
-  };
-}
-
-// ===== Options menu =====
-sessionOptionsBtn.onclick = () => {
-  optionsMenu.style.display = 'block';
-};
-
-document.addEventListener('click', e => {
-  if(!optionsMenu.contains(e.target) && e.target !== sessionOptionsBtn) {
-    optionsMenu.style.display = 'none';
-  }
-});
-
-// Actions
-document.getElementById('deleteSession').onclick = () => {
-  if(!sessionId) return;
-  const tx = db.transaction("sessions","readwrite");
-  const store = tx.objectStore("sessions");
-  store.delete(sessionId);
-  chatArea.innerHTML = '';
-  sessionId = null;
-  sessionSaved = false;
-  sessionOptionsBtn.style.display = 'none';
-  loadSessionList();
-  optionsMenu.style.display = 'none';
-};
-
-document.getElementById('renameSession').onclick = () => {
-  if(!sessionId) return;
-  const newName = prompt("Enter new session name:", "Chat");
-  if(!newName) return;
-  const tx = db.transaction("sessions","readwrite");
-  const store = tx.objectStore("sessions");
-  const req = store.get(sessionId);
-  req.onsuccess = () => {
-    const session = req.result;
-    if(!session) return;
-    session.sessionName = newName;
-    store.put(session);
-    loadSessionList();
-  };
-  optionsMenu.style.display = 'none';
-};
-
-document.getElementById('pinSession').onclick = () => {
-  alert("Pin feature coming in version 1.1!");
-  optionsMenu.style.display = 'none';
-};
 </script>
 
 </body>
