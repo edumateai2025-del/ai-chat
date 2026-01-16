@@ -11,57 +11,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    /* 1️⃣ OpenAI response */
-    const openaiResp = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-5-nano",
-          messages: [
-            { role: "system", content: "You are a friendly AI tutor." },
-            { role: "user", content: message },
-          ],
-        }),
-      }
-    );
+    /* ===== 1️⃣ ChatGPT Response ===== */
+    const openaiResp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-5-nano",
+        messages: [
+          { role: "system", content: "You are a friendly AI tutor." },
+          { role: "user", content: message },
+        ],
+      }),
+    });
 
-    const aiData = await openaiResp.json();
-    const reply =
-      aiData.choices?.[0]?.message?.content || "No response.";
+    const openaiData = await openaiResp.json();
+    const reply = openaiData.choices?.[0]?.message?.content || "No response.";
 
-    /* 2️⃣ Pixabay image search */
-    const pixabayResp = await fetch(
-      `https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY}&q=${encodeURIComponent(
-        message
-      )}&image_type=photo&safesearch=true&per_page=3`
-    );
+    /* ===== 2️⃣ Pixabay Image Search ===== */
+    const pixabayKey = process.env.PIXABAY_API_KEY;
+    const pixabayUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(message)}&image_type=photo&per_page=3&safesearch=true`;
 
+    const pixabayResp = await fetch(pixabayUrl);
     const pixabayData = await pixabayResp.json();
 
-    const images =
-      pixabayData.hits?.map((img) => ({
-        id: img.id,
-        thumbnail: img.webformatURL, // small (good for scroll)
-        full: img.largeImageURL, // full image on click
-        width: img.webformatWidth,
-        height: img.webformatHeight,
-      })) || [];
+    const images = (pixabayData.hits || []).map(hit => hit.webformatURL);
 
-    /* 3️⃣ Send combined response */
+    /* ===== 3️⃣ Send Combined Response ===== */
     res.status(200).json({
       reply,
       images,
+      suggestions: [] // optional: you can generate AI suggestions later
     });
+
   } catch (err) {
-    console.error("Backend error:", err);
-    res.status(500).json({
-      reply: "⚠️ Something went wrong. Please try again later.",
-      images: [],
-    });
+    console.error("API Error:", err);
+    res.status(500).json({ reply: "⚠️ Backend error.", images: [] });
   }
-  }
+}
