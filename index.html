@@ -31,7 +31,7 @@ body {
 /* ===== Top Bar ===== */
 .top-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid #ddd;
@@ -47,7 +47,7 @@ body {
   background: #fafafa;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .message {
@@ -98,18 +98,10 @@ body {
   border-radius: 8px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.2s;
-}
-
-.ai-images img:hover {
-  transform: scale(1.05);
 }
 
 .ai-images img.error {
   background: #ddd;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 /* ===== Follow-up suggestions ===== */
@@ -302,17 +294,22 @@ async function sendMessage(){
   const typingDiv = addMessage('ai', '<i>AI is thinking...</i>');
 
   try{
-    const resp = await fetch(`/api/chat`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
+    // 1️⃣ Chat response
+    const chatResp = await fetch(`/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text })
     });
-    const data = await resp.json();
-    const reply = data.reply || "No response.";
-    const images = data.images || [];
+    const chatData = await chatResp.json();
+    const reply = chatData.reply || "No response.";
+
+    // 2️⃣ Image response
+    const imgResp = await fetch(`/api/images?q=${encodeURIComponent(text)}`);
+    const imgData = await imgResp.json();
+    const images = imgData.images || [];
+
     typingDiv.remove();
 
-    // Sentence-based typing
     const sentences = reply.match(/[^.!?]+[.!?]?/g)||[reply];
     let idx=0;
     const aiDiv = addMessage('ai','');
@@ -325,13 +322,13 @@ async function sendMessage(){
         setTimeout(typeNext, 400);
       } else {
         aiTyping = false;
-        addFollowups(data.suggestions||[]);
+        addFollowups(chatData.suggestions||[]);
+        if(images.length>0) addMessage('ai','',images);
       }
     }
     typeNext();
 
     saveMessage('ai', formatAI(reply), images);
-    if(images.length>0) addMessage('ai','',images);
 
   } catch(err){
     typingDiv.remove();
