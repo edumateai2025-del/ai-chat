@@ -98,6 +98,11 @@ body {
   border-radius: 8px;
   cursor: pointer;
   flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.ai-images img:hover {
+  transform: scale(1.05);
 }
 
 .ai-images img.error {
@@ -297,7 +302,11 @@ async function sendMessage(){
   const typingDiv = addMessage('ai', '<i>AI is thinking...</i>');
 
   try{
-    const resp = await fetch(`/api/chat?q=${encodeURIComponent(text)}`);
+    const resp = await fetch(`/api/chat`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ message: text })
+    });
     const data = await resp.json();
     const reply = data.reply || "No response.";
     const images = data.images || [];
