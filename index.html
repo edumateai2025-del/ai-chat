@@ -1,484 +1,522 @@
-<!DOCTYPE html>  <html lang="en">  
-<head>  
-  <meta charset="UTF-8" />  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
-  <title>lenovox-ai- Ask & Imagine</title>    <style>  
-    /* ===== RESET ===== */  
-    * {  
-      margin:margin      padding: 0;  
-      box-sizing: border-box;  
-    }  
-  
-    body {  
-      background: #ffffff;  
-      color: #000000;  
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;  
-      height: 100vh;  
-      display: flex;  
-      flex-direction: column;  
-    }  
-  
-    /* ===== TOP BAR ===== */  
-    .top-bar {  
-      height: 56px;  
-      background: #ffffff;  
-      border-bottom: 1px solid #e5e5e5;  
-      display: flex;  
-      align-items: center;  
-      justify-content: space-between;  
-      padding: 0 16px;  
-      position: fixed;  
-      top: 0;  
-      left: 0;  
-      right: 0;  
-      z-index: 1000;  
-    }  
-  
-    .menu-btn {  
-      width: 40px;  
-      height: 40px;  
-      display: flex;  
-      flex-direction: column;  
-      justify-content: center;  
-      gap: 6px;  
-      cursor: pointer;  
-    }  
-  
-    .menu-line {  
-      width: 24px;  
-      height: 2.5px;  
-      background: #000;  
-      border-radius: 2px;  
-      margin: 0 auto;  
-    }  
-  
-    /* ===== MODE BUTTON GROUP ===== */  
-    .mode-buttons {  
-      display: flex;  
-      align-items: center;  
-      gap: 8px;  
-      background: #ffffff;  
-      border-radius: 999px;  
-      padding: 4px 6px;  
-      border: 1px solid #e5e5e5;  
-    }  
-  
-    .mode-btn {  
-      display: flex;  
-      align-items: center;  
-      gap: 8px;  
-      padding: 10px 18px;  
-      border-radius: 999px;  
-      color: #000;  
-      font-size: 14.5px;  
-      font-weight: 500;  
-      cursor: pointer;  
-      transition: background 0.2s ease;  
-      user-select: none;  
-      white-space: nowrap;  
-    }  
-  
-    .mode-btn.active {  
-      background: #f2f2f2;  
-    }  
-  
-    .mode-btn:hover {  
-      background: #f7f7f7;  
-    }  
-  
-    /* ===== ICONS ===== */  
-    .icon {  
-      width: 20px;  
-      height: 20px;  
-      position: relative;  
-      flex-shrink: 0;  
-      color: #000;  
-    }  
-  
-    .icon-ask::before {  
-      content: "";  
-      position: absolute;  
-      width: 16px;  
-      height: 12px;  
-      border: 2px solid currentColor;  
-      border-radius: 6px 6px 6px 2px;  
-      top: 4px;  
-      left: 2px;  
-    }  
-    .icon-ask::after {  
-      content: "";  
-      position: absolute;  
-      width: 0;  
-      height: 0;  
-      border-left: 5px solid transparent;  
-      border-right: 5px solid transparent;  
-      border-top: 6px solid currentColor;  
-      bottom: 2px;  
-      left: 6px;  
-    }  
-  
-    .icon-imagine {  
-      width: 18px;  
-      height: 18px;  
-    }  
-    .icon-imagine::before {  
-      content: "";  
-      position: absolute;  
-      width: 2px;  
-      height: 18px;  
-      background: currentColor;  
-      left: 8px;  
-      top: 0;  
-      transform: rotate(45deg);  
-    }  
-    .icon-imagine::after {  
-      content: "";  
-      position: absolute;  
-      width: 18px;  
-      height: 2px;  
-      background: currentColor;  
-      top: 8px;  
-      left: 0;  
-      transform: rotate(45deg);  
-    }  
-    .icon-imagine span {  
-      position: absolute;  
-      width: 4px;  
-      height: 4px;  
-      background: currentColor;  
-      border-radius: 50%;  
-      top: 7px;  
-      left: 7px;  
-      box-shadow:  
-        -6px -6px 0 currentColor,  
-         6px -6px 0 currentColor,  
-        -6px  6px 0 currentColor,  
-         6px  6px 0 currentColor;  
-    }  
-  
-    .icon-attach::before {  
-      content: "";  
-      position: absolute;  
-      width: 10px;  
-      height: 10px;  
-      border: 2.5px solid currentColor;  
-      border-radius: 50%;  
-      top: 2px;  
-      left: 4px;  
-      transform: rotate(-45deg);  
-    }  
-    .icon-attach::after {  
-      content: "";  
-      position: absolute;  
-      width: 2.5px;  
-      height: 12px;  
-      background: currentColor;  
-      bottom: 0;  
-      left: 10px;  
-      transform: rotate(-45deg);  
-    }  
-  
-    /* ===== CHAT AREAS ===== */  
-    .chat-area {  
-      position: absolute;  
-      top: 72px;  
-      bottom: 84px;  
-      left: 0;  
-      right: 0;  
-      padding: 16px;  
-      overflow-y: auto;  
-      display: flex;  
-      flex-direction: column;  
-      gap: 14px;  
-    }  
-  
-    #imagineArea {  
-      display: none;  
-    }  
-  
-    .message {  
-      max-width: 70%;  
-      padding: 12px 16px;  
-      border-radius: 18px;  
-      font-size: 16px;  
-      line-height: 1.45;  
-    }  
-  
-    .user-message {  
-      align-self: flex-end;  
-      background: #3a8dff;  
-      color: #fff;  
-      border-radius: 18px 18px 2px 18px;  
-    }  
-     .ai-message {  
-  align-self: stretch;      /* full width */  
-  background: #ffffff;      /* white background */  
-  color: #000000;           /* black text */  
-  border-radius: 4px;       /* subtle corners */  
-  padding: 12px 16px;  
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);  
-  font-size: 16px;  
-  line-height: 1.45;  
-}  
-    .no-network {  
-      margin-left: 6px;  
-      font-size: 14px;  
-      color: #ff4d4d;  
-    }  
-  
-    /* ===== INPUT AREA ===== */  
-    .input-area {  
-      position: fixed;  
-      bottom: 0;  
-      left: 0;  
-      right: 0;  
-      padding: 16px 20px;  
-      background: #ffffff;  
-      border-top: 1px solid #e5e5e5;  
-      display: flex;  
-      align-items: center;  
-      gap: 12px;  
-      z-index: 100;  
-    }  
-    .input {  
-      flex: 1;  
-      padding: 14px 20px;  
-      background: #ffffff;  
-      border: 1px solid #d1d1d1;  
-      border-radius: 999px;  
-      font-size: 1.05rem;  
-    }  
-    .send-btn {  
-      width: 48px;  
-      height: 48px;  
-      border-radius: 50%;  
-      background: #000;  
-      color: #fff;  
-      font-size: 1.6rem;  
-      border: none;  
-      cursor: pointer;  
-    }  
-  
-    /* ===== IMAGINE GRID ===== */  
-    .imagine-grid {  
-      display: grid;  
-      grid-template-columns: repeat(2, 1fr);  
-      gap: 12px;  
-    }  
-    .image-placeholder {  
-      width: 100%;  
-      aspect-ratio: 1 / 1;  
-      background: #f2f2f2;  
-      border-radius: 12px;  
-      cursor: pointer;  
-    }  
-  
-    /* ===== FULLSCREEN OVERLAY ===== */  
-    #imageOverlay {  
-      display: none;  
-      position: fixed;  
-      top: 0; left: 0;  
-      width: 100%; height: 100%;  
-      background: rgba(0,0,0,0.8);  
-      justify-content: center;  
-      align-items: center;  
-      z-index: 2000;  
-      flex-direction: column;  
-    }  
-    #imageOverlay img {  
-      max-width: 90%;  
-      max-height: 70%;  
-      border-radius: 12px;  
-    }  
-    #imageOverlay p {  
-      color: #fff;  
-      margin-top: 12px;  
-      font-size: 18px;  
-      text-align: center;  
-    }  
-    #imageOverlay button {  
-      margin-top: 16px;  
-      padding: 10px 16px;  
-      font-size: 16px;  
-      background: #fff;  
-      color: #000;  
-      border: none;  
-      border-radius: 8px;  
-      cursor: pointer;  
-    }  
-  </style>  </head>  <body>    <!-- TOP BAR -->    <div class="top-bar">  
-    <div class="menu-btn">  
-      <div class="menu-line"></div>  
-      <div class="menu-line"></div>  
-      <div class="menu-line"></div>  
-    </div>  <div class="mode-buttons">  
-  <div class="mode-btn active" data-mode="ask">  
-    <div class="icon icon-ask"></div> Ask  
-  </div>  
-  <div class="mode-btn" data-mode="imagine">  
-    <div class="icon icon-imagine"><span></span></div> Imagine  
-  </div>  
-  <div class="mode-btn" data-mode="attach">  
-    <div class="icon icon-attach"></div>  
-  </div>  
-</div>  
-<div style="width:40px;"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>lenovox-ai - Ask & Imagine</title>
+  <style>
+    /* ===== RESET ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  </div>    <!-- ASK CHAT -->    <div id="askArea" class="chat-area"></div>    <!-- IMAGINE CHAT -->    <div id="imagineArea" class="chat-area">  
-    <div class="imagine-grid" id="imagineGrid"></div>  
-  </div>    <!-- INPUT AREA -->    <div class="input-area">  
-    <input type="text" class="input" id="inputBox" placeholder="Ask anything..." />  
-    <button class="send-btn" id="sendBtn">↑</button>  
-  </div>    <!-- FULLSCREEN OVERLAY -->    <div id="imageOverlay">  
-    <img id="overlayImage" src="" />  
-    <p id="overlayDesc">Placeholder description</p>  
-    <button id="closeOverlay">Close</button>  
-  </div>    <script>  
-  /* =======================  
-   ELEMENT REFERENCES  
-======================= */  
-const inputBox = document.getElementById('inputBox');  
-const sendBtn = document.getElementById('sendBtn');  
+    body {
+      background: #ffffff;
+      color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-const askArea = document.getElementById('askArea');  
-const imagineArea = document.getElementById('imagineArea');  
-const imagineGrid = document.getElementById('imagineGrid');  
-const inputArea = document.querySelector('.input-area');  
+    /* ===== TOP BAR ===== */
+    .top-bar {
+      height: 56px;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e5e5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
 
-const overlay = document.getElementById('imageOverlay');  
-const overlayImg = document.getElementById('overlayImage');  
-const overlayDesc = document.getElementById('overlayDesc');  
-const closeOverlay = document.getElementById('closeOverlay');  
+    .menu-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
 
-let currentMode = "ask";  
+    .menu-line {
+      width: 24px;
+      height: 2.5px;
+      background: #000;
+      border-radius: 2px;
+      margin: 0 auto;
+    }
 
-/* =======================  
-   MODE SWITCHING  
-======================= */  
-document.querySelectorAll('.mode-btn').forEach(btn => {  
-  btn.addEventListener('click', () => {  
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));  
-    btn.classList.add('active');  
+    /* ===== MODE BUTTON GROUP ===== */
+    .mode-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border-radius: 999px;
+      padding: 4px 6px;
+      border: 1px solid #e5e5e5;
+    }
 
-    currentMode = btn.dataset.mode;  
+    .mode-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      color: #000;
+      font-size: 14.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
 
-    askArea.style.display = currentMode === "ask" ? "flex" : "none";  
-    imagineArea.style.display = currentMode === "imagine" ? "block" : "none";  
-    inputArea.style.display = currentMode === "attach" ? "none" : "flex";  
+    .mode-btn.active {
+      background: #f2f2f2;
+    }
 
-    inputBox.placeholder =  
-      currentMode === "imagine"  
-        ? "describe which image to generate..."  
-        : "Ask anything...";  
-  });  
-});  
+    .mode-btn:hover {
+      background: #f7f7f7;
+    }
 
-/* =======================  
-   SEND BUTTON ACTION  
-======================= */  
-sendBtn.addEventListener('click', async () => {  
-  const text = inputBox.value.trim();  
-  if (!text) return;  
+    /* ===== ICONS ===== */
+    .icon {
+      width: 20px;
+      height: 20px;
+      position: relative;
+      flex-shrink: 0;
+      color: #000;
+    }
 
-  /* ---------- ASK MODE ---------- */  
-  if (currentMode === "ask") {  
+    .icon-ask::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 12px;
+      border: 2px solid currentColor;
+      border-radius: 6px 6px 6px 2px;
+      top: 4px;
+      left: 2px;
+    }
+    .icon-ask::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid currentColor;
+      bottom: 2px;
+      left: 6px;
+    }
 
-    // USER MESSAGE  
-    const userDiv = document.createElement('div');  
-    userDiv.className = 'message user-message';  
+    .icon-imagine {
+      width: 18px;
+      height: 18px;
+    }
+    .icon-imagine::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 18px;
+      background: currentColor;
+      left: 8px;
+      top: 0;
+      transform: rotate(45deg);
+    }
+    .icon-imagine::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 2px;
+      background: currentColor;
+      top: 8px;
+      left: 0;
+      transform: rotate(45deg);
+    }
+    .icon-imagine span {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: currentColor;
+      border-radius: 50%;
+      top: 7px;
+      left: 7px;
+      box-shadow:
+        -6px -6px 0 currentColor,
+         6px -6px 0 currentColor,
+        -6px  6px 0 currentColor,
+         6px  6px 0 currentColor;
+    }
 
-    const msgText = document.createElement('span');  
-    msgText.textContent = text;  
+    .icon-attach::before {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border: 2.5px solid currentColor;
+      border-radius: 50%;
+      top: 2px;
+      left: 4px;
+      transform: rotate(-45deg);
+    }
+    .icon-attach::after {
+      content: "";
+      position: absolute;
+      width: 2.5px;
+      height: 12px;
+      background: currentColor;
+      bottom: 0;
+      left: 10px;
+      transform: rotate(-45deg);
+    }
 
-    const network = document.createElement('span');  
-    network.className = "no-network";  
-    network.textContent = " 🛜";  
+    /* ===== CHAT AREAS ===== */
+    .chat-area {
+      position: absolute;
+      top: 72px;
+      bottom: 84px;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
 
-    msgText.appendChild(network);  
-    userDiv.appendChild(msgText);  
-    askArea.appendChild(userDiv);  
+    #imagineArea {
+      display: none;
+    }
 
-    askArea.scrollTop = askArea.scrollHeight;  
-    inputBox.value = "";  
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      font-size: 16px;
+      line-height: 1.45;
+    }
 
-    // AI PLACEHOLDER + TYPING  
-    const aiDiv = document.createElement('div');  
-    aiDiv.className = 'message ai-message';  
-    aiDiv.textContent = "Lenovox-ai is thinking";  
-    askArea.appendChild(aiDiv);  
-    askArea.scrollTop = askArea.scrollHeight;  
+    .user-message {
+      align-self: flex-end;
+      background: #3a8dff;
+      color: #fff;
+      border-radius: 18px 18px 2px 18px;
+      display: flex;
+      flex-direction: column;
+    }
+     .ai-message {
+      align-self: stretch;
+      background: #ffffff;
+      color: #000000;
+      border-radius: 4px;
+      padding: 12px 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+    .no-network {
+      margin-left: 6px;
+      font-size: 14px;
+      color: #ff4d4d;
+    }
 
-    let dots = 0;  
-    const typingInterval = setInterval(() => {  
-      dots = (dots + 1) % 4;  
-      aiDiv.textContent = "Lenovox-ai is thinking" + ".".repeat(dots);  
-      askArea.scrollTop = askArea.scrollHeight;  
-    }, 500);  
+    /* ===== MESSAGE STATUS ===== */
+    .message-status {
+      font-size: 13px;
+      color: #999;
+      margin-top: 4px;
+      display: block;
+    }
 
-    try {  
-      const response = await fetch('/api/chat.js', {  
-        method: 'POST',  
-        headers: { 'Content-Type': 'application/json' },  
-        body: JSON.stringify({ message: text })  
-      });  
+    /* ===== INPUT AREA ===== */
+    .input-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 20px;
+      background: #ffffff;
+      border-top: 1px solid #e5e5e5;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+    }
+    .input {
+      flex: 1;
+      padding: 14px 20px;
+      background: #ffffff;
+      border: 1px solid #d1d1d1;
+      border-radius: 999px;
+      font-size: 1.05rem;
+    }
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #000;
+      color: #fff;
+      font-size: 1.6rem;
+      border: none;
+      cursor: pointer;
+    }
 
-      const data = await response.json();  
-      clearInterval(typingInterval);  
-      aiDiv.textContent = data.reply || "No response";  
+    /* ===== IMAGINE GRID ===== */
+    .imagine-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .image-placeholder {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #f2f2f2;
+      border-radius: 12px;
+      cursor: pointer;
+    }
 
-    } catch (err) {  
-      clearInterval(typingInterval);  
-      aiDiv.textContent = "⚠️ Error fetching response";  
-    }  
+    /* ===== FULLSCREEN OVERLAY ===== */
+    #imageOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      flex-direction: column;
+    }
+    #imageOverlay img {
+      max-width: 90%;
+      max-height: 70%;
+      border-radius: 12px;
+    }
+    #imageOverlay p {
+      color: #fff;
+      margin-top: 12px;
+      font-size: 18px;
+      text-align: center;
+    }
+    #imageOverlay button {
+      margin-top: 16px;
+      padding: 10px 16px;
+      font-size: 16px;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
 
-    askArea.scrollTop = askArea.scrollHeight;  
-  }  
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="menu-btn">
+    <div class="menu-line"></div>
+    <div class="menu-line"></div>
+    <div class="menu-line"></div>
+  </div>
+  <div class="mode-buttons">
+    <div class="mode-btn active" data-mode="ask">
+      <div class="icon icon-ask"></div> Ask
+    </div>
+    <div class="mode-btn" data-mode="imagine">
+      <div class="icon icon-imagine"><span></span></div> Imagine
+    </div>
+    <div class="mode-btn" data-mode="attach">
+      <div class="icon icon-attach"></div>
+    </div>
+  </div>
+  <div style="width:40px;"></div>
+</div>
 
-  /* ---------- IMAGINE MODE ---------- */  
-  if (currentMode === "imagine") {  
-    generateImagePlaceholders();  
-    inputBox.value = "";  
-  }  
-});  
+<!-- ASK CHAT -->
+<div id="askArea" class="chat-area"></div>
 
-/* =======================  
-   GENERATE 50 PLACEHOLDERS  
-======================= */  
-function generateImagePlaceholders() {  
-  imagineGrid.innerHTML = "";  
-  for (let i = 0; i < 50; i++) {  
-    const box = document.createElement('div');  
-    box.className = "image-placeholder";  
-    imagineGrid.appendChild(box);  
-  }  
-  addClickToPlaceholders();  
-}  
+<!-- IMAGINE CHAT -->
+<div id="imagineArea" class="chat-area">
+  <div class="imagine-grid" id="imagineGrid"></div>
+</div>
 
-/* =======================  
-   IMAGE CLICK OVERLAY  
-======================= */  
-function addClickToPlaceholders() {  
-  document.querySelectorAll('.image-placeholder').forEach((box, index) => {  
-    box.addEventListener('click', () => {  
-      overlayImg.src = "";  
-      overlayDesc.textContent = "Placeholder description #" + (index + 1);  
-      overlay.style.display = "flex";  
-    });  
-  });  
-}  
+<!-- INPUT AREA -->
+<div class="input-area">
+  <input type="text" class="input" id="inputBox" placeholder="Ask anything..." />
+  <button class="send-btn" id="sendBtn">↑</button>
+</div>
 
-/* =======================  
-   CLOSE OVERLAY  
-======================= */  
-closeOverlay.addEventListener('click', () => {  
-  overlay.style.display = "none";  
-});  
+<!-- FULLSCREEN OVERLAY -->
+<div id="imageOverlay">
+  <img id="overlayImage" src="" />
+  <p id="overlayDesc">Placeholder description</p>
+  <button id="closeOverlay">Close</button>
+</div>
 
-/* =======================  
-   INITIAL LOAD  
-======================= */  
-generateImagePlaceholders();  
-imagineArea.style.display = "none";  
+<script>
+/* =======================
+   ELEMENT REFERENCES
+======================= */
+const inputBox = document.getElementById('inputBox');
+const sendBtn = document.getElementById('sendBtn');
+
+const askArea = document.getElementById('askArea');
+const imagineArea = document.getElementById('imagineArea');
+const imagineGrid = document.getElementById('imagineGrid');
+const inputArea = document.querySelector('.input-area');
+
+const overlay = document.getElementById('imageOverlay');
+const overlayImg = document.getElementById('overlayImage');
+const overlayDesc = document.getElementById('overlayDesc');
+const closeOverlay = document.getElementById('closeOverlay');
+
+let currentMode = "ask";
+
+/* =======================
+   MODE SWITCHING
+======================= */
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    currentMode = btn.dataset.mode;
+
+    askArea.style.display = currentMode === "ask" ? "flex" : "none";
+    imagineArea.style.display = currentMode === "imagine" ? "block" : "none";
+    inputArea.style.display = currentMode === "attach" ? "none" : "flex";
+
+    inputBox.placeholder =
+      currentMode === "imagine"
+        ? "describe which image to generate..."
+        : "Ask anything...";
+  });
+});
+
+/* =======================
+   SEND BUTTON ACTION
+======================= */
+sendBtn.addEventListener('click', async () => {
+  const text = inputBox.value.trim();
+  if (!text) return;
+
+  if (currentMode === "ask") {
+
+    // USER MESSAGE
+    const userDiv = document.createElement('div');
+    userDiv.className = 'message user-message';
+
+    const msgText = document.createElement('span');
+    msgText.textContent = text;
+
+    // STATUS SPAN
+    const statusSpan = document.createElement('div');
+    statusSpan.className = 'message-status';
+    statusSpan.textContent = 'Sending...';
+
+    userDiv.appendChild(msgText);
+    userDiv.appendChild(statusSpan);
+    askArea.appendChild(userDiv);
+    askArea.scrollTop = askArea.scrollHeight;
+    inputBox.value = "";
+
+    // AI PLACEHOLDER + TYPING
+    const aiDiv = document.createElement('div');
+    aiDiv.className = 'message ai-message';
+    aiDiv.textContent = "Lenovox-ai is thinking";
+    askArea.appendChild(aiDiv);
+    askArea.scrollTop = askArea.scrollHeight;
+
+    let dots = 0;
+    const typingInterval = setInterval(() => {
+      dots = (dots + 1) % 4;
+      aiDiv.textContent = "Lenovox-ai is thinking" + ".".repeat(dots);
+      askArea.scrollTop = askArea.scrollHeight;
+    }, 500);
+
+    try {
+      const response = await fetch('/api/chat.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await response.json();
+
+      clearInterval(typingInterval);
+      aiDiv.textContent = data.reply || "No response";
+
+      // UPDATE STATUS ON SUCCESS
+      statusSpan.textContent = 'Sent ✅';
+
+    } catch (err) {
+      clearInterval(typingInterval);
+      aiDiv.textContent = "⚠️ Error fetching response";
+
+      // UPDATE STATUS ON ERROR
+      statusSpan.textContent = 'Error ⚠️';
+    }
+
+    askArea.scrollTop = askArea.scrollHeight;
+  }
+
+  if (currentMode === "imagine") {
+    generateImagePlaceholders();
+    inputBox.value = "";
+  }
+});
+
+/* =======================
+   GENERATE 50 PLACEHOLDERS
+======================= */
+function generateImagePlaceholders() {
+  imagineGrid.innerHTML = "";
+  for (let i = 0; i < 50; i++) {
+    const box = document.createElement('div');
+    box.className = "image-placeholder";
+    imagineGrid.appendChild(box);
+  }
+  addClickToPlaceholders();
+}
+
+/* =======================
+   IMAGE CLICK OVERLAY
+======================= */
+function addClickToPlaceholders() {
+  document.querySelectorAll('.image-placeholder').forEach((box, index) => {
+    box.addEventListener('click', () => {
+      overlayImg.src = "";
+      overlayDesc.textContent = "Placeholder description #" + (index + 1);
+      overlay.style.display = "flex";
+    });
+  });
+}
+
+/* =======================
+   CLOSE OVERLAY
+======================= */
+closeOverlay.addEventListener('click', () => {
+  overlay.style.display = "none";
+});
+
+/* =======================
+   INITIAL LOAD
+======================= */
+generateImagePlaceholders();
+imagineArea.style.display = "none";
 askArea.style.display = "flex";
-  </script>  </body>  
-</html>
+</script>
+</body>
+                                   </html>
