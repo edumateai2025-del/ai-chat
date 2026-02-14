@@ -5,49 +5,32 @@ export default async function handler(req, res) {
   }
 
   const { message } = req.body;
+  const apiKey = process.env.OPENAI2_API_KEY;
 
-  if (!message) {
-    return res.status(400).json({ reply: "No message received." });
+  if (!apiKey) {
+    return res.status(500).json({ reply: "API Key (OPENAI2_API_KEY) not configured in Vercel." });
   }
 
   try {
-    /* ===== 1️⃣ ChatGPT Response ===== */
-    const openaiResp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-5-nano",
+        model: "gpt-3.5-turbo",
         messages: [
-          { role: "system", content: "You are a friendly AI tutor." },
-          { role: "user", content: message },
+          { role: "system", content: "You are a friendly and helpful AI tutor for students. Explain concepts clearly and simply." },
+          { role: "user", content: message }
         ],
       }),
     });
 
-    const openaiData = await openaiResp.json();
-    const reply = openaiData.choices?.[0]?.message?.content || "No response.";
-
-    /* ===== 2️⃣ Pixabay Image Search ===== */
-    const pixabayKey = process.env.PIXABAY_API_KEY;
-    const pixabayUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${encodeURIComponent(message)}&image_type=photo&per_page=3&safesearch=true`;
-
-    const pixabayResp = await fetch(pixabayUrl);
-    const pixabayData = await pixabayResp.json();
-
-    const images = (pixabayData.hits || []).map(hit => hit.webformatURL);
-
-    /* ===== 3️⃣ Send Combined Response ===== */
-    res.status(200).json({
-      reply,
-      images,
-      suggestions: [] // optional: you can generate AI suggestions later
-    });
-
-  } catch (err) {
-    console.error("API Error:", err);
-    res.status(500).json({ reply: "⚠️ Backend error.", images: [] });
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content || "I couldn't generate a response.";
+    res.status(200).json({ reply });
+  } catch (error) {
+    res.status(500).json({ reply: "Error connecting to AI service." });
   }
 }
