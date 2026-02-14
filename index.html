@@ -1,522 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>lenovox-ai - Ask & Imagine</title>
-  <style>
-    /* ===== RESET ===== */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lenovox-ai - Ask & Imagine</title>
+    <!-- Tailwind for layout, Google Fonts for style -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Three.js for 3D elements -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
 
-    body {
-      background: #ffffff;
-      color: #000000;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+        /* 3D Perspective for Cards */
+        .perspective-container {
+            perspective: 1000px;
+        }
+        .tilt-card {
+            transition: transform 0.2s ease-out;
+            transform-style: preserve-3d;
+        }
+        .tilt-card:hover {
+            transform: rotateX(5deg) rotateY(5deg);
+        }
 
-    /* ===== TOP BAR ===== */
-    .top-bar {
-      height: 56px;
-      background: #ffffff;
-      border-bottom: 1px solid #e5e5e5;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-    }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
 
-    .menu-btn {
-      width: 40px;
-      height: 40px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 6px;
-      cursor: pointer;
-    }
+        /* Animated Background */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
 
-    .menu-line {
-      width: 24px;
-      height: 2.5px;
-      background: #000;
-      border-radius: 2px;
-      margin: 0 auto;
-    }
+        /* Tab Transition */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    /* ===== MODE BUTTON GROUP ===== */
-    .mode-buttons {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #ffffff;
-      border-radius: 999px;
-      padding: 4px 6px;
-      border: 1px solid #e5e5e5;
-    }
+        /* Glassmorphism */
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-    .mode-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: 999px;
-      color: #000;
-      font-size: 14.5px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.2s ease;
-      user-select: none;
-      white-space: nowrap;
-    }
-
-    .mode-btn.active {
-      background: #f2f2f2;
-    }
-
-    .mode-btn:hover {
-      background: #f7f7f7;
-    }
-
-    /* ===== ICONS ===== */
-    .icon {
-      width: 20px;
-      height: 20px;
-      position: relative;
-      flex-shrink: 0;
-      color: #000;
-    }
-
-    .icon-ask::before {
-      content: "";
-      position: absolute;
-      width: 16px;
-      height: 12px;
-      border: 2px solid currentColor;
-      border-radius: 6px 6px 6px 2px;
-      top: 4px;
-      left: 2px;
-    }
-    .icon-ask::after {
-      content: "";
-      position: absolute;
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-top: 6px solid currentColor;
-      bottom: 2px;
-      left: 6px;
-    }
-
-    .icon-imagine {
-      width: 18px;
-      height: 18px;
-    }
-    .icon-imagine::before {
-      content: "";
-      position: absolute;
-      width: 2px;
-      height: 18px;
-      background: currentColor;
-      left: 8px;
-      top: 0;
-      transform: rotate(45deg);
-    }
-    .icon-imagine::after {
-      content: "";
-      position: absolute;
-      width: 18px;
-      height: 2px;
-      background: currentColor;
-      top: 8px;
-      left: 0;
-      transform: rotate(45deg);
-    }
-    .icon-imagine span {
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      background: currentColor;
-      border-radius: 50%;
-      top: 7px;
-      left: 7px;
-      box-shadow:
-        -6px -6px 0 currentColor,
-         6px -6px 0 currentColor,
-        -6px  6px 0 currentColor,
-         6px  6px 0 currentColor;
-    }
-
-    .icon-attach::before {
-      content: "";
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      border: 2.5px solid currentColor;
-      border-radius: 50%;
-      top: 2px;
-      left: 4px;
-      transform: rotate(-45deg);
-    }
-    .icon-attach::after {
-      content: "";
-      position: absolute;
-      width: 2.5px;
-      height: 12px;
-      background: currentColor;
-      bottom: 0;
-      left: 10px;
-      transform: rotate(-45deg);
-    }
-
-    /* ===== CHAT AREAS ===== */
-    .chat-area {
-      position: absolute;
-      top: 72px;
-      bottom: 84px;
-      left: 0;
-      right: 0;
-      padding: 16px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    #imagineArea {
-      display: none;
-    }
-
-    .message {
-      max-width: 70%;
-      padding: 12px 16px;
-      border-radius: 18px;
-      font-size: 16px;
-      line-height: 1.45;
-    }
-
-    .user-message {
-      align-self: flex-end;
-      background: #3a8dff;
-      color: #fff;
-      border-radius: 18px 18px 2px 18px;
-      display: flex;
-      flex-direction: column;
-    }
-     .ai-message {
-      align-self: stretch;
-      background: #ffffff;
-      color: #000000;
-      border-radius: 4px;
-      padding: 12px 16px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-      font-size: 16px;
-      line-height: 1.45;
-    }
-    .no-network {
-      margin-left: 6px;
-      font-size: 14px;
-      color: #ff4d4d;
-    }
-
-    /* ===== MESSAGE STATUS ===== */
-    .message-status {
-      font-size: 13px;
-      color: #999;
-      margin-top: 4px;
-      display: block;
-    }
-
-    /* ===== INPUT AREA ===== */
-    .input-area {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 16px 20px;
-      background: #ffffff;
-      border-top: 1px solid #e5e5e5;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      z-index: 100;
-    }
-    .input {
-      flex: 1;
-      padding: 14px 20px;
-      background: #ffffff;
-      border: 1px solid #d1d1d1;
-      border-radius: 999px;
-      font-size: 1.05rem;
-    }
-    .send-btn {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: #000;
-      color: #fff;
-      font-size: 1.6rem;
-      border: none;
-      cursor: pointer;
-    }
-
-    /* ===== IMAGINE GRID ===== */
-    .imagine-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-    .image-placeholder {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      background: #f2f2f2;
-      border-radius: 12px;
-      cursor: pointer;
-    }
-
-    /* ===== FULLSCREEN OVERLAY ===== */
-    #imageOverlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-      flex-direction: column;
-    }
-    #imageOverlay img {
-      max-width: 90%;
-      max-height: 70%;
-      border-radius: 12px;
-    }
-    #imageOverlay p {
-      color: #fff;
-      margin-top: 12px;
-      font-size: 18px;
-      text-align: center;
-    }
-    #imageOverlay button {
-      margin-top: 16px;
-      padding: 10px 16px;
-      font-size: 16px;
-      background: #fff;
-      color: #000;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-  </style>
+        /* Typing Animation */
+        .typing::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col">
 
-<!-- TOP BAR -->
-<div class="top-bar">
-  <div class="menu-btn">
-    <div class="menu-line"></div>
-    <div class="menu-line"></div>
-    <div class="menu-line"></div>
-  </div>
-  <div class="mode-buttons">
-    <div class="mode-btn active" data-mode="ask">
-      <div class="icon icon-ask"></div> Ask
-    </div>
-    <div class="mode-btn" data-mode="imagine">
-      <div class="icon icon-imagine"><span></span></div> Imagine
-    </div>
-    <div class="mode-btn" data-mode="attach">
-      <div class="icon icon-attach"></div>
-    </div>
-  </div>
-  <div style="width:40px;"></div>
-</div>
+    <!-- 3D Background Canvas -->
+    <div id="canvas-container"></div>
 
-<!-- ASK CHAT -->
-<div id="askArea" class="chat-area"></div>
+    <!-- Navigation -->
+    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center mb-8">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/50">L</div>
+            <h1 class="text-xl font-extrabold tracking-tight">lenovox<span class="text-blue-400">.ai</span></h1>
+        </div>
+        <div class="flex gap-1 bg-slate-800/50 p-1 rounded-xl border border-white/5">
+            <button onclick="switchTab('ask')" id="ask-tab" class="px-6 py-2 rounded-lg font-semibold transition-all duration-300 bg-blue-600 text-white">Ask</button>
+            <button onclick="switchTab('imagine')" id="imagine-tab" class="px-6 py-2 rounded-lg font-semibold transition-all duration-300 text-slate-400 hover:text-white">Imagine</button>
+        </div>
+    </nav>
 
-<!-- IMAGINE CHAT -->
-<div id="imagineArea" class="chat-area">
-  <div class="imagine-grid" id="imagineGrid"></div>
-</div>
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 max-w-4xl">
+        
+        <!-- ASK SECTION -->
+        <section id="ask-section" class="tab-content active space-y-6">
+            <div class="glass rounded-3xl p-6 min-h-[400px] flex flex-col shadow-2xl">
+                <div id="chat-messages" class="flex-grow space-y-4 overflow-y-auto mb-6 pr-2">
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center text-xs">AI</div>
+                        <div class="bg-slate-800/80 rounded-2xl rounded-tl-none px-4 py-3 max-w-[85%] border border-white/5">
+                            <p class="text-sm leading-relaxed">Hey there! I'm your AI study buddy. Ask me anything about science, history, or just for fun! 🚀</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="relative">
+                    <input type="text" id="chat-input" placeholder="Ask your study buddy..." 
+                           class="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all">
+                    <button onclick="sendMessage()" class="absolute right-3 top-2 bg-blue-600 hover:bg-blue-500 p-2 rounded-xl transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
-<!-- INPUT AREA -->
-<div class="input-area">
-  <input type="text" class="input" id="inputBox" placeholder="Ask anything..." />
-  <button class="send-btn" id="sendBtn">↑</button>
-</div>
+            <!-- Suggested Prompts -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <button onclick="setPrompt('Explain quantum physics simply')" class="glass hover:bg-white/5 p-3 rounded-xl text-xs text-slate-300 text-left transition-all border-white/5">Explain quantum physics simply</button>
+                <button onclick="setPrompt('Help me write a short story')" class="glass hover:bg-white/5 p-3 rounded-xl text-xs text-slate-300 text-left transition-all border-white/5">Help me write a short story</button>
+                <button onclick="setPrompt('Quick history fact about space')" class="glass hover:bg-white/5 p-3 rounded-xl text-xs text-slate-300 text-left transition-all border-white/5">Quick history fact about space</button>
+            </div>
+        </section>
 
-<!-- FULLSCREEN OVERLAY -->
-<div id="imageOverlay">
-  <img id="overlayImage" src="" />
-  <p id="overlayDesc">Placeholder description</p>
-  <button id="closeOverlay">Close</button>
-</div>
+        <!-- IMAGINE SECTION -->
+        <section id="imagine-section" class="tab-content space-y-6">
+            <div class="text-center space-y-2 mb-8">
+                <h2 class="text-3xl font-extrabold">Visualize Your Ideas</h2>
+                <p class="text-slate-400">Search for educational visuals and creative inspiration.</p>
+            </div>
 
-<script>
-/* =======================
-   ELEMENT REFERENCES
-======================= */
-const inputBox = document.getElementById('inputBox');
-const sendBtn = document.getElementById('sendBtn');
+            <div class="relative max-w-2xl mx-auto mb-12">
+                <input type="text" id="image-input" placeholder="Imagine a futuristic library..." 
+                       class="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all">
+                <button onclick="generateImage()" class="absolute right-3 top-2 bg-purple-600 hover:bg-purple-500 p-2 rounded-xl transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </div>
 
-const askArea = document.getElementById('askArea');
-const imagineArea = document.getElementById('imagineArea');
-const imagineGrid = document.getElementById('imagineGrid');
-const inputArea = document.querySelector('.input-area');
+            <!-- Image Results Gallery -->
+            <div id="image-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 perspective-container">
+                <!-- Images will appear here -->
+            </div>
+        </section>
 
-const overlay = document.getElementById('imageOverlay');
-const overlayImg = document.getElementById('overlayImage');
-const overlayDesc = document.getElementById('overlayDesc');
-const closeOverlay = document.getElementById('closeOverlay');
+    </main>
 
-let currentMode = "ask";
+    <!-- Footer -->
+    <footer class="py-8 text-center text-slate-500 text-sm">
+        <p>&copy; 2026 lenovox.ai • Built for Students</p>
+    </footer>
 
-/* =======================
-   MODE SWITCHING
-======================= */
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    <script>
+        // --- 3D Background with Three.js ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    currentMode = btn.dataset.mode;
+        const geometry = new THREE.IcosahedronGeometry(10, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true });
+        const sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
 
-    askArea.style.display = currentMode === "ask" ? "flex" : "none";
-    imagineArea.style.display = currentMode === "imagine" ? "block" : "none";
-    inputArea.style.display = currentMode === "attach" ? "none" : "flex";
+        camera.position.z = 30;
 
-    inputBox.placeholder =
-      currentMode === "imagine"
-        ? "describe which image to generate..."
-        : "Ask anything...";
-  });
-});
+        function animate() {
+            requestAnimationFrame(animate);
+            sphere.rotation.x += 0.002;
+            sphere.rotation.y += 0.002;
+            renderer.render(scene, camera);
+        }
+        animate();
 
-/* =======================
-   SEND BUTTON ACTION
-======================= */
-sendBtn.addEventListener('click', async () => {
-  const text = inputBox.value.trim();
-  if (!text) return;
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-  if (currentMode === "ask") {
+        // --- Tab Logic ---
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab + '-section').classList.add('active');
+            
+            const askTab = document.getElementById('ask-tab');
+            const imagineTab = document.getElementById('imagine-tab');
+            
+            if(tab === 'ask') {
+                askTab.className = "px-6 py-2 rounded-lg font-semibold bg-blue-600 text-white";
+                imagineTab.className = "px-6 py-2 rounded-lg font-semibold text-slate-400 hover:text-white";
+            } else {
+                imagineTab.className = "px-6 py-2 rounded-lg font-semibold bg-purple-600 text-white";
+                askTab.className = "px-6 py-2 rounded-lg font-semibold text-slate-400 hover:text-white";
+            }
+        }
 
-    // USER MESSAGE
-    const userDiv = document.createElement('div');
-    userDiv.className = 'message user-message';
+        // --- Chat Logic ---
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if(!message) return;
 
-    const msgText = document.createElement('span');
-    msgText.textContent = text;
+            addMessage(message, 'user');
+            input.value = '';
 
-    // STATUS SPAN
-    const statusSpan = document.createElement('div');
-    statusSpan.className = 'message-status';
-    statusSpan.textContent = 'Sending...';
+            const loadingId = addMessage('Thinking...', 'ai', true);
 
-    userDiv.appendChild(msgText);
-    userDiv.appendChild(statusSpan);
-    askArea.appendChild(userDiv);
-    askArea.scrollTop = askArea.scrollHeight;
-    inputBox.value = "";
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+                updateMessage(loadingId, data.reply);
+            } catch (error) {
+                updateMessage(loadingId, "Oops! Something went wrong with the AI connection.");
+            }
+        }
 
-    // AI PLACEHOLDER + TYPING
-    const aiDiv = document.createElement('div');
-    aiDiv.className = 'message ai-message';
-    aiDiv.textContent = "Lenovox-ai is thinking";
-    askArea.appendChild(aiDiv);
-    askArea.scrollTop = askArea.scrollHeight;
+        function addMessage(text, sender, isLoading = false) {
+            const container = document.getElementById('chat-messages');
+            const id = 'msg-' + Date.now();
+            const div = document.createElement('div');
+            div.className = `flex gap-3 ${sender === 'user' ? 'flex-row-reverse' : ''}`;
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-full ${sender === 'user' ? 'bg-purple-500' : 'bg-blue-500'} flex-shrink-0 flex items-center justify-center text-xs">
+                    ${sender === 'user' ? 'YOU' : 'AI'}
+                </div>
+                <div id="${id}" class="${sender === 'user' ? 'bg-blue-600' : 'bg-slate-800/80'} rounded-2xl ${sender === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'} px-4 py-3 max-w-[85%] border border-white/5">
+                    <p class="text-sm leading-relaxed">${text}</p>
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
 
-    let dots = 0;
-    const typingInterval = setInterval(() => {
-      dots = (dots + 1) % 4;
-      aiDiv.textContent = "Lenovox-ai is thinking" + ".".repeat(dots);
-      askArea.scrollTop = askArea.scrollHeight;
-    }, 500);
+        function updateMessage(id, text) {
+            const el = document.getElementById(id);
+            if(el) el.querySelector('p').innerText = text;
+        }
 
-    try {
-      const response = await fetch('/api/chat.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
-      });
+        function setPrompt(text) {
+            document.getElementById('chat-input').value = text;
+            sendMessage();
+        }
 
-      const data = await response.json();
+        // --- Imagine Logic ---
+        async function generateImage() {
+            const input = document.getElementById('image-input');
+            const query = input.value.trim();
+            if(!query) return;
 
-      clearInterval(typingInterval);
-      aiDiv.textContent = data.reply || "No response";
+            const results = document.getElementById('image-results');
+            results.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400">Searching for visual inspiration...</div>';
 
-      // UPDATE STATUS ON SUCCESS
-      statusSpan.textContent = 'Sent ✅';
+            try {
+                const response = await fetch('/api/image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                const data = await response.json();
+                
+                results.innerHTML = '';
+                data.images.forEach(img => {
+                    const card = document.createElement('div');
+                    card.className = "tilt-card glass rounded-2xl overflow-hidden shadow-lg hover:shadow-purple-500/20";
+                    card.innerHTML = `
+                        <img src="${img.url}" alt="${img.description}" class="w-full h-48 object-cover">
+                        <div class="p-4">
+                            <p class="text-xs text-slate-400 line-clamp-2">${img.description}</p>
+                            <button onclick="useInChat('${img.description}')" class="mt-3 text-xs text-purple-400 font-bold hover:text-purple-300">EXPLAIN THIS →</button>
+                        </div>
+                    `;
+                    results.appendChild(card);
+                });
+            } catch (error) {
+                results.innerHTML = '<div class="col-span-full text-center py-12 text-red-400">Failed to load images. Check your API key!</div>';
+            }
+        }
 
-    } catch (err) {
-      clearInterval(typingInterval);
-      aiDiv.textContent = "⚠️ Error fetching response";
+        function useInChat(desc) {
+            switchTab('ask');
+            setPrompt(`Can you explain what this image represents: ${desc}`);
+        }
 
-      // UPDATE STATUS ON ERROR
-      statusSpan.textContent = 'Error ⚠️';
-    }
+        // Add Enter key support
+        document.getElementById('chat-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+        document.getElementById('image-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') generateImage(); });
 
-    askArea.scrollTop = askArea.scrollHeight;
-  }
-
-  if (currentMode === "imagine") {
-    generateImagePlaceholders();
-    inputBox.value = "";
-  }
-});
-
-/* =======================
-   GENERATE 50 PLACEHOLDERS
-======================= */
-function generateImagePlaceholders() {
-  imagineGrid.innerHTML = "";
-  for (let i = 0; i < 50; i++) {
-    const box = document.createElement('div');
-    box.className = "image-placeholder";
-    imagineGrid.appendChild(box);
-  }
-  addClickToPlaceholders();
-}
-
-/* =======================
-   IMAGE CLICK OVERLAY
-======================= */
-function addClickToPlaceholders() {
-  document.querySelectorAll('.image-placeholder').forEach((box, index) => {
-    box.addEventListener('click', () => {
-      overlayImg.src = "";
-      overlayDesc.textContent = "Placeholder description #" + (index + 1);
-      overlay.style.display = "flex";
-    });
-  });
-}
-
-/* =======================
-   CLOSE OVERLAY
-======================= */
-closeOverlay.addEventListener('click', () => {
-  overlay.style.display = "none";
-});
-
-/* =======================
-   INITIAL LOAD
-======================= */
-generateImagePlaceholders();
-imagineArea.style.display = "none";
-askArea.style.display = "flex";
-</script>
+    </script>
 </body>
-                                   </html>
+                          </html>
