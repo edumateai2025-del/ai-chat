@@ -4,182 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>lenovox-ai - Ask & Imagine</title>
-    <!-- Tailwind for layout, Google Fonts for style -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-    <!-- Three.js for 3D elements -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: #0f172a;
+            background: #020617;
             color: #f8fafc;
             overflow-x: hidden;
         }
-
-        /* 3D Perspective for Cards */
-        .perspective-container {
-            perspective: 1000px;
+        .glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .tab-content { display: none; animation: slideUp 0.4s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #canvas-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
         }
         .tilt-card {
-            transition: transform 0.2s ease-out;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform-style: preserve-3d;
         }
         .tilt-card:hover {
-            transform: rotateX(5deg) rotateY(5deg);
+            transform: translateY(-8px) rotateX(4deg) rotateY(4deg);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
+        .loader {
+            width: 24px; height: 24px; border: 3px solid #3b82f6;
+            border-bottom-color: transparent; border-radius: 50%;
+            display: inline-block; animation: rotation 1s linear infinite;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
-        }
-
-        /* Animated Background */
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.4;
-        }
-
-        /* Tab Transition */
-        .tab-content {
-            display: none;
-            animation: fadeIn 0.5s ease-out;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Glassmorphism */
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Typing Animation */
-        .typing::after {
-            content: '|';
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-
-    <!-- 3D Background Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- Navigation -->
-    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center mb-8">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/50">L</div>
-            <h1 class="text-xl font-extrabold tracking-tight">lenovox<span class="text-blue-400">.ai</span></h1>
+    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center font-bold text-white shadow-xl">L</div>
+            <h1 class="text-2xl font-extrabold tracking-tighter">lenovox<span class="text-blue-400">.ai</span></h1>
         </div>
-        <div class="flex gap-1 bg-slate-800/50 p-1 rounded-xl border border-white/5">
-            <button onclick="switchTab('ask')" id="ask-tab" class="px-6 py-2 rounded-lg font-semibold transition-all duration-300 bg-blue-600 text-white">Ask</button>
-            <button onclick="switchTab('imagine')" id="imagine-tab" class="px-6 py-2 rounded-lg font-semibold transition-all duration-300 text-slate-400 hover:text-white">Imagine</button>
+        <div class="flex gap-1 bg-slate-900/80 p-1.5 rounded-2xl border border-white/5">
+            <button onclick="switchTab('ask')" id="ask-btn" class="px-6 py-2.5 rounded-xl font-bold transition-all bg-blue-600 text-white shadow-lg">Ask</button>
+            <button onclick="switchTab('imagine')" id="imagine-btn" class="px-6 py-2.5 rounded-xl font-bold transition-all text-slate-400 hover:text-white">Imagine</button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="flex-grow container mx-auto px-4 max-w-4xl">
-        
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-4xl">
         <!-- ASK SECTION -->
         <section id="ask-section" class="tab-content active space-y-6">
-            <div class="glass rounded-3xl p-6 min-h-[400px] flex flex-col shadow-2xl">
-                <div id="chat-messages" class="flex-grow space-y-4 overflow-y-auto mb-6 pr-2">
-                    <div class="flex gap-3">
-                        <div class="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center text-xs">AI</div>
-                        <div class="bg-slate-800/80 rounded-2xl rounded-tl-none px-4 py-3 max-w-[85%] border border-white/5">
-                            <p class="text-sm leading-relaxed">Hey there! I'm your AI study buddy. Ask me anything about science, history, or just for fun! 🚀</p>
+            <div class="glass rounded-[2rem] p-6 min-h-[500px] flex flex-col shadow-2xl border-white/10">
+                <div id="chat-messages" class="flex-grow space-y-6 overflow-y-auto mb-6 pr-2 max-h-[60vh]">
+                    <div class="flex gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 flex-shrink-0 flex items-center justify-center text-xs font-bold shadow-lg">AI</div>
+                        <div class="bg-slate-800/50 rounded-2xl rounded-tl-none px-5 py-4 max-w-[85%] border border-white/5">
+                            <p class="text-sm md:text-base leading-relaxed">Hello! I'm your AI study partner. Ready to explore some big ideas together? 🎓</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="relative">
-                    <input type="text" id="chat-input" placeholder="Ask your study buddy..." 
-                           class="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all">
-                    <button onclick="sendMessage()" class="absolute right-3 top-2 bg-blue-600 hover:bg-blue-500 p-2 rounded-xl transition-colors">
+                <div class="relative group">
+                    <input type="text" id="chat-input" placeholder="Type your question here..." 
+                           class="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-lg">
+                    <button onclick="sendMessage()" class="absolute right-3 top-2.5 bg-blue-600 hover:bg-blue-500 p-3 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                     </button>
                 </div>
             </div>
-
-            <!-- Suggested Prompts -->
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <button onclick="setPrompt('Explain quantum physics simply')" class="glass hover:bg-white/5 p-3 rounded-xl text-xs text-slate-300 text-left transition-all border-white/5">Explain quantum physics simply</button>
-                <button onclick="setPrompt('Help me write a short story')" class="glass hover:bg-white/5 p-3 rounded-xl text-xs text-slate-300 text-left transition-all border-white/5">Help me write a short story</button>
-                <button onclick="setPrompt('Quick history fact about space')" class="glass hover:bg-white/5 p-3 rounded-xl text-xs text-slate-300 text-left transition-all border-white/5">Quick history fact about space</button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="setPrompt('Explain the solar system')" class="glass hover:bg-blue-600/20 p-4 rounded-2xl text-sm text-slate-300 text-left transition-all border-white/5 font-medium">☀️ Solar System</button>
+                <button onclick="setPrompt('Write a poem about coding')" class="glass hover:bg-purple-600/20 p-4 rounded-2xl text-sm text-slate-300 text-left transition-all border-white/5 font-medium">💻 Coding Poem</button>
+                <button onclick="setPrompt('How do volcanoes work?')" class="glass hover:bg-orange-600/20 p-4 rounded-2xl text-sm text-slate-300 text-left transition-all border-white/5 font-medium">🌋 Volcanoes</button>
             </div>
         </section>
 
         <!-- IMAGINE SECTION -->
-        <section id="imagine-section" class="tab-content space-y-6">
-            <div class="text-center space-y-2 mb-8">
-                <h2 class="text-3xl font-extrabold">Visualize Your Ideas</h2>
-                <p class="text-slate-400">Search for educational visuals and creative inspiration.</p>
+        <section id="imagine-section" class="tab-content space-y-8">
+            <div class="text-center space-y-3">
+                <h2 class="text-4xl font-black tracking-tight bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Imagine Anything</h2>
+                <p class="text-slate-400 font-medium">Find perfect visuals for your projects and study notes.</p>
             </div>
 
-            <div class="relative max-w-2xl mx-auto mb-12">
-                <input type="text" id="image-input" placeholder="Imagine a futuristic library..." 
-                       class="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all">
-                <button onclick="generateImage()" class="absolute right-3 top-2 bg-purple-600 hover:bg-purple-500 p-2 rounded-xl transition-colors">
+            <div class="relative max-w-2xl mx-auto">
+                <input type="text" id="image-input" placeholder="Search for something amazing..." 
+                       class="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-lg">
+                <button onclick="generateImage()" class="absolute right-3 top-2.5 bg-purple-600 hover:bg-purple-500 p-3 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </button>
             </div>
 
-            <!-- Image Results Gallery -->
-            <div id="image-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 perspective-container">
-                <!-- Images will appear here -->
-            </div>
+            <div id="image-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
         </section>
-
     </main>
 
-    <!-- Footer -->
-    <footer class="py-8 text-center text-slate-500 text-sm">
-        <p>&copy; 2026 lenovox.ai • Built for Students</p>
+    <footer class="py-12 text-center text-slate-500 font-bold text-sm">
+        <p>LENOVOX.AI • FOR THE NEXT GENERATION</p>
     </footer>
 
     <script>
-        // --- 3D Background with Three.js ---
+        // 3D Background Logic
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ alpha: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-        const geometry = new THREE.IcosahedronGeometry(10, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true });
-        const sphere = new THREE.Mesh(geometry, material);
-        scene.add(sphere);
+        const group = new THREE.Group();
+        scene.add(group);
 
-        camera.position.z = 30;
+        const geometry = new THREE.IcosahedronGeometry(12, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.3 });
+        const mesh = new THREE.Mesh(geometry, material);
+        group.add(mesh);
+
+        camera.position.z = 35;
 
         function animate() {
             requestAnimationFrame(animate);
-            sphere.rotation.x += 0.002;
-            sphere.rotation.y += 0.002;
+            group.rotation.x += 0.001;
+            group.rotation.y += 0.0015;
             renderer.render(scene, camera);
         }
         animate();
@@ -190,24 +145,23 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- Tab Logic ---
+        // App Logic
         function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(tab + '-section').classList.add('active');
             
-            const askTab = document.getElementById('ask-tab');
-            const imagineTab = document.getElementById('imagine-tab');
+            const askBtn = document.getElementById('ask-btn');
+            const imagineBtn = document.getElementById('imagine-btn');
             
             if(tab === 'ask') {
-                askTab.className = "px-6 py-2 rounded-lg font-semibold bg-blue-600 text-white";
-                imagineTab.className = "px-6 py-2 rounded-lg font-semibold text-slate-400 hover:text-white";
+                askBtn.className = "px-6 py-2.5 rounded-xl font-bold bg-blue-600 text-white shadow-lg";
+                imagineBtn.className = "px-6 py-2.5 rounded-xl font-bold text-slate-400 hover:text-white";
             } else {
-                imagineTab.className = "px-6 py-2 rounded-lg font-semibold bg-purple-600 text-white";
-                askTab.className = "px-6 py-2 rounded-lg font-semibold text-slate-400 hover:text-white";
+                imagineBtn.className = "px-6 py-2.5 rounded-xl font-bold bg-purple-600 text-white shadow-lg";
+                askBtn.className = "px-6 py-2.5 rounded-xl font-bold text-slate-400 hover:text-white";
             }
         }
 
-        // --- Chat Logic ---
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
@@ -215,8 +169,7 @@
 
             addMessage(message, 'user');
             input.value = '';
-
-            const loadingId = addMessage('Thinking...', 'ai', true);
+            const loadingId = addMessage('<span class="loader"></span>', 'ai');
 
             try {
                 const response = await fetch('/api/chat', {
@@ -225,48 +178,42 @@
                     body: JSON.stringify({ message })
                 });
                 const data = await response.json();
-                updateMessage(loadingId, data.reply);
+                updateMessage(loadingId, data.reply || "No response received.");
             } catch (error) {
-                updateMessage(loadingId, "Oops! Something went wrong with the AI connection.");
+                updateMessage(loadingId, "Connection error. Please check your Vercel settings.");
             }
         }
 
-        function addMessage(text, sender, isLoading = false) {
+        function addMessage(text, sender) {
             const container = document.getElementById('chat-messages');
-            const id = 'msg-' + Date.now();
+            const id = 'msg-' + Math.random().toString(36).substr(2, 9);
             const div = document.createElement('div');
-            div.className = `flex gap-3 ${sender === 'user' ? 'flex-row-reverse' : ''}`;
+            div.className = `flex gap-4 ${sender === 'user' ? 'flex-row-reverse' : ''}`;
             div.innerHTML = `
-                <div class="w-8 h-8 rounded-full ${sender === 'user' ? 'bg-purple-500' : 'bg-blue-500'} flex-shrink-0 flex items-center justify-center text-xs">
+                <div class="w-10 h-10 rounded-xl ${sender === 'user' ? 'bg-purple-600' : 'bg-blue-600'} flex-shrink-0 flex items-center justify-center text-xs font-bold shadow-lg">
                     ${sender === 'user' ? 'YOU' : 'AI'}
                 </div>
-                <div id="${id}" class="${sender === 'user' ? 'bg-blue-600' : 'bg-slate-800/80'} rounded-2xl ${sender === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'} px-4 py-3 max-w-[85%] border border-white/5">
-                    <p class="text-sm leading-relaxed">${text}</p>
+                <div id="${id}" class="${sender === 'user' ? 'bg-blue-700/80' : 'bg-slate-800/50'} rounded-2xl ${sender === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'} px-5 py-4 max-w-[85%] border border-white/5 shadow-xl">
+                    <p class="text-sm md:text-base leading-relaxed">${text}</p>
                 </div>
             `;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
             return id;
         }
 
         function updateMessage(id, text) {
             const el = document.getElementById(id);
-            if(el) el.querySelector('p').innerText = text;
+            if(el) el.innerHTML = `<p class="text-sm md:text-base leading-relaxed">${text}</p>`;
         }
 
-        function setPrompt(text) {
-            document.getElementById('chat-input').value = text;
-            sendMessage();
-        }
-
-        // --- Imagine Logic ---
         async function generateImage() {
             const input = document.getElementById('image-input');
             const query = input.value.trim();
             if(!query) return;
 
             const results = document.getElementById('image-results');
-            results.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400">Searching for visual inspiration...</div>';
+            results.innerHTML = '<div class="col-span-full text-center py-20"><span class="loader"></span><p class="mt-4 text-slate-400">Opening a portal to your imagination...</p></div>';
 
             try {
                 const response = await fetch('/api/image', {
@@ -277,32 +224,34 @@
                 const data = await response.json();
                 
                 results.innerHTML = '';
+                if(!data.images || data.images.length === 0) {
+                    results.innerHTML = '<p class="col-span-full text-center py-20 text-slate-500">No images found. Try a different word!</p>';
+                    return;
+                }
+
                 data.images.forEach(img => {
                     const card = document.createElement('div');
-                    card.className = "tilt-card glass rounded-2xl overflow-hidden shadow-lg hover:shadow-purple-500/20";
+                    card.className = "tilt-card glass rounded-3xl overflow-hidden shadow-2xl border-white/10";
                     card.innerHTML = `
-                        <img src="${img.url}" alt="${img.description}" class="w-full h-48 object-cover">
-                        <div class="p-4">
-                            <p class="text-xs text-slate-400 line-clamp-2">${img.description}</p>
-                            <button onclick="useInChat('${img.description}')" class="mt-3 text-xs text-purple-400 font-bold hover:text-purple-300">EXPLAIN THIS →</button>
+                        <div class="relative group h-60 overflow-hidden">
+                            <img src="${img.url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                                <button onclick="useInChat('${img.description}')" class="w-full bg-white text-black py-3 rounded-xl font-bold text-sm shadow-xl">EXPLAIN THIS</button>
+                            </div>
                         </div>
+                        <div class="p-5"><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">${img.description.split(',')[0]}</p></div>
                     `;
                     results.appendChild(card);
                 });
             } catch (error) {
-                results.innerHTML = '<div class="col-span-full text-center py-12 text-red-400">Failed to load images. Check your API key!</div>';
+                results.innerHTML = '<p class="col-span-full text-center py-20 text-red-400 font-bold">Error fetching images. Check your PIXABAY2_API_KEY.</p>';
             }
         }
 
-        function useInChat(desc) {
-            switchTab('ask');
-            setPrompt(`Can you explain what this image represents: ${desc}`);
-        }
-
-        // Add Enter key support
+        function setPrompt(text) { document.getElementById('chat-input').value = text; sendMessage(); }
+        function useInChat(desc) { switchTab('ask'); setPrompt(`Tell me more about: ${desc}`); }
         document.getElementById('chat-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
         document.getElementById('image-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') generateImage(); });
-
     </script>
-</body>
-                          </html>
+    </body>
+</html>
