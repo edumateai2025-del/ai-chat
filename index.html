@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -15,9 +17,9 @@
             overflow-x: hidden;
         }
         .glass {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .tab-content { display: none; animation: slideUp 0.4s ease-out; }
         .tab-content.active { display: block; }
@@ -28,26 +30,40 @@
         #canvas-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
         }
-        .tilt-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-        }
-        .tilt-card:hover {
-            transform: translateY(-8px) rotateX(4deg) rotateY(4deg);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
+        
+        /* Chat Content Formatting */
+        .ai-response h1 { font-size: 1.5rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #60a5fa; }
+        .ai-response h2 { font-size: 1.25rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; color: #93c5fd; }
+        .ai-response p { margin-bottom: 1.25rem; line-height: 1.8; }
+        .ai-response ul, .ai-response ol { margin-bottom: 1.25rem; padding-left: 1.5rem; }
+        .ai-response li { margin-bottom: 0.5rem; }
+        .ai-response code { background: rgba(255,255,255,0.1); padding: 0.2rem 0.4rem; rounded: 0.25rem; font-family: monospace; }
+        
+        /* Custom Scrollbar */
+        #chat-messages::-webkit-scrollbar { width: 6px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
         .loader {
-            width: 24px; height: 24px; border: 3px solid #3b82f6;
+            width: 20px; height: 20px; border: 2px solid #3b82f6;
             border-bottom-color: transparent; border-radius: 50%;
             display: inline-block; animation: rotation 1s linear infinite;
         }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .typing-cursor::after {
+            content: "▋";
+            animation: blink 1s step-end infinite;
+            color: #3b82f6;
+            margin-left: 2px;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
     <div id="canvas-container"></div>
 
-    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
+    <!-- Navigation -->
+    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-xl">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center font-bold text-white shadow-xl">L</div>
             <h1 class="text-2xl font-extrabold tracking-tighter">lenovox<span class="text-blue-400">.ai</span></h1>
@@ -58,59 +74,67 @@
         </div>
     </nav>
 
-    <main class="flex-grow container mx-auto px-4 py-8 max-w-4xl">
+    <main class="flex-grow container mx-auto px-4 py-6 max-w-5xl flex flex-col">
+        
         <!-- ASK SECTION -->
-        <section id="ask-section" class="tab-content active space-y-6">
-            <div class="glass rounded-[2rem] p-6 min-h-[500px] flex flex-col shadow-2xl border-white/10">
-                <div id="chat-messages" class="flex-grow space-y-6 overflow-y-auto mb-6 pr-2 max-h-[60vh]">
+        <section id="ask-section" class="tab-content active flex flex-col flex-grow space-y-4">
+            
+            <!-- Suggested Topics (Now at the top) -->
+            <div class="flex flex-wrap gap-2 justify-center mb-2">
+                <button onclick="setPrompt('Explain the solar system')" class="glass hover:bg-blue-600/20 px-4 py-2 rounded-full text-xs text-slate-300 transition-all border-white/5 font-medium">☀️ Solar System</button>
+                <button onclick="setPrompt('Solve: 2x + 5 = 15')" class="glass hover:bg-green-600/20 px-4 py-2 rounded-full text-xs text-slate-300 transition-all border-white/5 font-medium">🔢 Math Formula</button>
+                <button onclick="setPrompt('Write a coding poem')" class="glass hover:bg-purple-600/20 px-4 py-2 rounded-full text-xs text-slate-300 transition-all border-white/5 font-medium">💻 Coding Poem</button>
+                <button onclick="setPrompt('How do volcanoes work?')" class="glass hover:bg-orange-600/20 px-4 py-2 rounded-full text-xs text-slate-300 transition-all border-white/5 font-medium">🌋 Volcanoes</button>
+            </div>
+
+            <!-- Expanded Chat Container -->
+            <div class="glass rounded-[2.5rem] p-6 flex-grow flex flex-col shadow-2xl border-white/10 min-h-[65vh]">
+                <div id="chat-messages" class="flex-grow space-y-8 overflow-y-auto mb-6 pr-4">
+                    <!-- Initial Welcome -->
                     <div class="flex gap-4">
                         <div class="w-10 h-10 rounded-xl bg-blue-600 flex-shrink-0 flex items-center justify-center text-xs font-bold shadow-lg">AI</div>
-                        <div class="bg-slate-800/50 rounded-2xl rounded-tl-none px-5 py-4 max-w-[85%] border border-white/5">
-                            <p class="text-sm md:text-base leading-relaxed">Hello! I'm your AI study partner. Ready to explore some big ideas together? 🎓</p>
+                        <div class="bg-slate-800/50 rounded-2xl rounded-tl-none px-6 py-5 max-w-[90%] border border-white/5">
+                            <div class="ai-response">
+                                <p class="text-base leading-relaxed">Welcome back! I've been upgraded with better formatting and a smoother typing feel. What should we learn today? 🚀</p>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="relative group">
-                    <input type="text" id="chat-input" placeholder="Type your question here..." 
-                           class="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-lg">
-                    <button onclick="sendMessage()" class="absolute right-3 top-2.5 bg-blue-600 hover:bg-blue-500 p-3 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg">
+                <!-- Input Area -->
+                <div class="relative group mt-auto">
+                    <input type="text" id="chat-input" placeholder="Ask your study partner anything..." 
+                           class="w-full bg-slate-900/90 border border-white/10 rounded-3xl px-8 py-6 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-lg shadow-2xl">
+                    <button onclick="sendMessage()" class="absolute right-4 top-3.5 bg-blue-600 hover:bg-blue-500 p-4 rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                     </button>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button onclick="setPrompt('Explain the solar system')" class="glass hover:bg-blue-600/20 p-4 rounded-2xl text-sm text-slate-300 text-left transition-all border-white/5 font-medium">☀️ Solar System</button>
-                <button onclick="setPrompt('Write a poem about coding')" class="glass hover:bg-purple-600/20 p-4 rounded-2xl text-sm text-slate-300 text-left transition-all border-white/5 font-medium">💻 Coding Poem</button>
-                <button onclick="setPrompt('How do volcanoes work?')" class="glass hover:bg-orange-600/20 p-4 rounded-2xl text-sm text-slate-300 text-left transition-all border-white/5 font-medium">🌋 Volcanoes</button>
-            </div>
         </section>
 
         <!-- IMAGINE SECTION -->
         <section id="imagine-section" class="tab-content space-y-8">
             <div class="text-center space-y-3">
-                <h2 class="text-4xl font-black tracking-tight bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Imagine Anything</h2>
-                <p class="text-slate-400 font-medium">Find perfect visuals for your projects and study notes.</p>
+                <h2 class="text-4xl font-black tracking-tight bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Visual Studio</h2>
+                <p class="text-slate-400 font-medium">Generate and explore high-quality educational visuals.</p>
             </div>
-
             <div class="relative max-w-2xl mx-auto">
-                <input type="text" id="image-input" placeholder="Search for something amazing..." 
-                       class="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-lg">
+                <input type="text" id="image-input" placeholder="Describe what you want to see..." 
+                       class="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-lg shadow-xl">
                 <button onclick="generateImage()" class="absolute right-3 top-2.5 bg-purple-600 hover:bg-purple-500 p-3 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </button>
             </div>
-
             <div id="image-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
         </section>
     </main>
 
-    <footer class="py-12 text-center text-slate-500 font-bold text-sm">
-        <p>LENOVOX.AI • FOR THE NEXT GENERATION</p>
+    <footer class="py-8 text-center text-slate-600 font-bold text-xs tracking-widest">
+        <p>LENOVOX.AI • EMPOWERING STUDENTS</p>
     </footer>
 
     <script>
@@ -125,7 +149,7 @@
         scene.add(group);
 
         const geometry = new THREE.IcosahedronGeometry(12, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.3 });
+        const material = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.2 });
         const mesh = new THREE.Mesh(geometry, material);
         group.add(mesh);
 
@@ -133,8 +157,8 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            group.rotation.x += 0.001;
-            group.rotation.y += 0.0015;
+            group.rotation.x += 0.0008;
+            group.rotation.y += 0.001;
             renderer.render(scene, camera);
         }
         animate();
@@ -169,6 +193,7 @@
 
             addMessage(message, 'user');
             input.value = '';
+            
             const loadingId = addMessage('<span class="loader"></span>', 'ai');
 
             try {
@@ -178,13 +203,47 @@
                     body: JSON.stringify({ message })
                 });
                 const data = await response.json();
-                updateMessage(loadingId, data.reply || "No response received.");
+                const replyText = data.reply || "No response received.";
+                
+                // Remove loader and start typing effect
+                document.getElementById(loadingId).innerHTML = '';
+                typeEffect(loadingId, replyText);
+                
             } catch (error) {
-                updateMessage(loadingId, "Connection error. Please check your Vercel settings.");
+                updateMessage(loadingId, "Connection error. Check your API settings.");
             }
         }
 
-        function addMessage(text, sender) {
+        function typeEffect(id, fullText) {
+            const element = document.getElementById(id);
+            element.classList.add('typing-cursor');
+            let i = 0;
+            const speed = 15; // Fast but readable typing
+
+            // Convert Markdown to HTML first, but type it out
+            // To handle HTML correctly during typing, we'll type the text and then render MD
+            let currentText = "";
+            
+            const timer = setInterval(() => {
+                if (i < fullText.length) {
+                    currentText += fullText.charAt(i);
+                    // Use marked to render partial markdown for a cool effect
+                    element.innerHTML = `<div class="ai-response">${marked.parse(currentText)}</div>`;
+                    i++;
+                    
+                    // Scroll to bottom during typing
+                    const container = document.getElementById('chat-messages');
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    clearInterval(timer);
+                    element.classList.remove('typing-cursor');
+                    // Final render to be sure
+                    element.innerHTML = `<div class="ai-response">${marked.parse(fullText)}</div>`;
+                }
+            }, speed);
+        }
+
+        function addMessage(content, sender) {
             const container = document.getElementById('chat-messages');
             const id = 'msg-' + Math.random().toString(36).substr(2, 9);
             const div = document.createElement('div');
@@ -193,8 +252,10 @@
                 <div class="w-10 h-10 rounded-xl ${sender === 'user' ? 'bg-purple-600' : 'bg-blue-600'} flex-shrink-0 flex items-center justify-center text-xs font-bold shadow-lg">
                     ${sender === 'user' ? 'YOU' : 'AI'}
                 </div>
-                <div id="${id}" class="${sender === 'user' ? 'bg-blue-700/80' : 'bg-slate-800/50'} rounded-2xl ${sender === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'} px-5 py-4 max-w-[85%] border border-white/5 shadow-xl">
-                    <p class="text-sm md:text-base leading-relaxed">${text}</p>
+                <div class="${sender === 'user' ? 'bg-blue-700/80' : 'bg-slate-800/50'} rounded-2xl ${sender === 'user' ? 'rounded-tr-none' : 'rounded-tl-none'} px-6 py-5 max-w-[90%] border border-white/5 shadow-xl">
+                    <div id="${id}" class="ai-response text-sm md:text-base leading-relaxed">
+                        ${sender === 'user' ? content : content}
+                    </div>
                 </div>
             `;
             container.appendChild(div);
@@ -204,7 +265,7 @@
 
         function updateMessage(id, text) {
             const el = document.getElementById(id);
-            if(el) el.innerHTML = `<p class="text-sm md:text-base leading-relaxed">${text}</p>`;
+            if(el) el.innerHTML = `<div class="ai-response">${marked.parse(text)}</div>`;
         }
 
         async function generateImage() {
@@ -213,7 +274,7 @@
             if(!query) return;
 
             const results = document.getElementById('image-results');
-            results.innerHTML = '<div class="col-span-full text-center py-20"><span class="loader"></span><p class="mt-4 text-slate-400">Opening a portal to your imagination...</p></div>';
+            results.innerHTML = '<div class="col-span-full text-center py-20"><span class="loader"></span><p class="mt-4 text-slate-400 font-bold">Imagining your request...</p></div>';
 
             try {
                 const response = await fetch('/api/image', {
@@ -225,33 +286,36 @@
                 
                 results.innerHTML = '';
                 if(!data.images || data.images.length === 0) {
-                    results.innerHTML = '<p class="col-span-full text-center py-20 text-slate-500">No images found. Try a different word!</p>';
+                    results.innerHTML = '<p class="col-span-full text-center py-20 text-slate-500">No matches found. Try something else!</p>';
                     return;
                 }
 
                 data.images.forEach(img => {
                     const card = document.createElement('div');
-                    card.className = "tilt-card glass rounded-3xl overflow-hidden shadow-2xl border-white/10";
+                    card.className = "glass rounded-[2rem] overflow-hidden shadow-2xl border-white/10 group hover:scale-[1.02] transition-transform duration-300";
                     card.innerHTML = `
-                        <div class="relative group h-60 overflow-hidden">
-                            <img src="${img.url}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-                                <button onclick="useInChat('${img.description}')" class="w-full bg-white text-black py-3 rounded-xl font-bold text-sm shadow-xl">EXPLAIN THIS</button>
+                        <div class="relative h-64 overflow-hidden">
+                            <img src="${img.url}" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="useInChat('${img.description}')" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-xl hover:bg-blue-500 transition-colors">EXPLAIN CONCEPT</button>
                             </div>
                         </div>
-                        <div class="p-5"><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">${img.description.split(',')[0]}</p></div>
+                        <div class="p-5">
+                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Visual Reference</p>
+                            <p class="text-sm text-slate-300 font-medium line-clamp-1">${img.description}</p>
+                        </div>
                     `;
                     results.appendChild(card);
                 });
             } catch (error) {
-                results.innerHTML = '<p class="col-span-full text-center py-20 text-red-400 font-bold">Error fetching images. Check your PIXABAY2_API_KEY.</p>';
+                results.innerHTML = '<p class="col-span-full text-center py-20 text-red-400 font-bold">Error connecting to image service.</p>';
             }
         }
-
-        function setPrompt(text) { document.getElementById('chat-input').value = text; sendMessage(); }
-        function useInChat(desc) { switchTab('ask'); setPrompt(`Tell me more about: ${desc}`); }
+function setPrompt(text) { document.getElementById('chat-input').value = text; sendMessage(); }
+        function useInChat(desc) { switchTab('ask'); setPrompt(`Explain the concept shown here: ${desc}`); }
         document.getElementById('chat-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
         document.getElementById('image-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') generateImage(); });
     </script>
-    </body>
+</body>
 </html>
+        
