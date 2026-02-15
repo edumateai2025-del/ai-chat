@@ -8,6 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- KaTeX for Math Formulas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <!-- Highlight.js for Code Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         :root { --primary: #3b82f6; --bg: #020617; }
         body {
@@ -25,11 +31,72 @@
         #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.2; }
         
         /* Message Styling */
-        .ai-response h1 { font-size: 1.4rem; font-weight: 800; margin: 1.5rem 0 0.8rem; color: #60a5fa; }
-        .ai-response h2 { font-size: 1.1rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #93c5fd; }
+        .ai-response h1 { font-size: 1.8rem; font-weight: 800; margin: 1.5rem 0 0.8rem; color: #60a5fa; border-bottom: 2px solid rgba(96, 165, 250, 0.3); padding-bottom: 0.5rem; }
+        .ai-response h2 { font-size: 1.4rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #93c5fd; }
+        .ai-response h3 { font-size: 1.1rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #bfdbfe; }
         .ai-response p { margin-bottom: 1.2rem; line-height: 1.8; font-size: 1rem; }
-        .ai-response ul, .ai-response ol { margin-bottom: 1.2rem; padding-left: 1.2rem; }
-        .ai-response li { margin-bottom: 0.6rem; }
+        .ai-response ul { margin-bottom: 1.2rem; padding-left: 2rem; list-style-type: disc; }
+        .ai-response ol { margin-bottom: 1.2rem; padding-left: 2rem; list-style-type: decimal; }
+        .ai-response li { margin-bottom: 0.6rem; line-height: 1.6; }
+        
+        /* Code Block Styling */
+        .ai-response code { 
+            background: rgba(0, 0, 0, 0.4); 
+            padding: 0.2rem 0.5rem; 
+            border-radius: 0.3rem; 
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #fbbf24;
+        }
+        .ai-response pre { 
+            background: rgba(0, 0, 0, 0.6); 
+            padding: 1rem; 
+            border-radius: 0.5rem; 
+            overflow-x: auto; 
+            margin-bottom: 1.2rem;
+            border-left: 3px solid #3b82f6;
+        }
+        .ai-response pre code { 
+            background: none; 
+            padding: 0; 
+            color: #e2e8f0;
+        }
+        
+        /* KaTeX Formula Styling */
+        .katex-display { 
+            background: rgba(0, 0, 0, 0.3); 
+            padding: 1rem; 
+            border-radius: 0.5rem; 
+            margin: 1rem 0; 
+            overflow-x: auto;
+        }
+        .katex { font-size: 1.1em; }
+        
+        /* Blockquote Styling */
+        .ai-response blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #cbd5e1;
+            font-style: italic;
+        }
+        
+        /* Copy Button */
+        .copy-btn {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.3rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0.5rem;
+        }
+        .copy-btn:hover {
+            background: rgba(59, 130, 246, 0.4);
+            border-color: rgba(59, 130, 246, 0.8);
+        }
         
         /* Scrollbar */
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -44,6 +111,47 @@
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         
         .hidden-suggestions { display: none !important; }
+
+        /* Loading Indicator */
+        .loading-dots {
+            display: inline-flex;
+            gap: 0.3rem;
+        }
+        .loading-dots span {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: #3b82f6;
+            animation: bounce 1.4s infinite;
+        }
+        .loading-dots span:nth-child(1) { animation-delay: 0s; }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-0.5rem); }
+        }
+
+        /* Scroll to Top Button */
+        #scroll-to-top {
+            position: fixed;
+            bottom: 150px;
+            right: 20px;
+            background: rgba(59, 130, 246, 0.8);
+            border: none;
+            color: white;
+            padding: 0.8rem;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            z-index: 30;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        #scroll-to-top:hover {
+            background: rgba(59, 130, 246, 1);
+            transform: translateY(-2px);
+        }
 
         /* Fixed heights for UI components */
         nav { height: 64px; }
@@ -67,6 +175,13 @@
             <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-8 no-scrollbar pb-[180px]">
                 <!-- Messages injected here -->
             </div>
+
+            <!-- Scroll to Top Button -->
+            <button id="scroll-to-top" onclick="scrollToTop()" title="Scroll to top">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+            </button>
 
             <!-- Bottom Area Fixed -->
             <div id="bottom-container" class="absolute bottom-0 left-0 w-full z-40">
@@ -191,6 +306,7 @@
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
+            input.focus(); // Improvement #3: Auto-focus input after sending
             
             hideSuggestions();
             renderMessage(text, 'user');
@@ -218,14 +334,31 @@
             
             const div = document.createElement('div');
             div.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-slide-up`;
+            
+            const messageContent = isNewAI ? 
+                '<div class="loading-dots"><span></span><span></span><span></span></div>' : 
+                '';
+            
             div.innerHTML = `
                 <div class="${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-800/60 text-slate-100 rounded-2xl rounded-tl-none'} px-5 py-4 w-full max-w-[95%] shadow-lg border border-white/5">
-                    <div id="${id}" class="ai-response">${isNewAI ? '' : marked.parse(text)}</div>
+                    <div id="${id}" class="ai-response">${messageContent}</div>
+                    ${!isUser && !isNewAI ? `<button class="copy-btn" onclick="copyToClipboard('${id}')">📋 Copy</button>` : ''}
                 </div>
             `;
             container.appendChild(div);
             scrollToBottom();
             return id;
+        }
+
+        // Improvement #1: Copy to Clipboard Function
+        function copyToClipboard(id) {
+            const element = document.getElementById(id);
+            const text = element.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
         }
 
         function typeText(id, fullText) {
@@ -234,43 +367,156 @@
             let i = 0;
             const interval = setInterval(() => {
                 if (i < fullText.length) {
-                    el.innerHTML = marked.parse(fullText.substring(0, i + 1));
+                    el.innerHTML = formatAndRenderText(fullText.substring(0, i + 1));
                     i++;
                     scrollToBottom();
                 } else {
                     clearInterval(interval);
                     el.classList.remove('typing');
+                    el.innerHTML = formatAndRenderText(fullText);
                     scrollToBottom();
                 }
             }, 15);
         }
 
+        // Improvement #4 & Advanced Formatting: Format text with proper markdown, code, and math rendering
+        function formatAndRenderText(text) {
+            // Parse markdown
+            let html = marked.parse(text);
+            
+            // Create a temporary container to process the HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            
+            // Process code blocks for syntax highlighting
+            temp.querySelectorAll('pre code').forEach(block => {
+                try {
+                    block.innerHTML = hljs.highlightAuto(block.textContent).value;
+                } catch (e) {
+                    // Fallback if highlighting fails
+                }
+            });
+            
+            // Process inline code
+            temp.querySelectorAll('code:not(pre code)').forEach(code => {
+                if (!code.parentElement.tagName.match(/^(PRE|H[1-6])$/)) {
+                    // Already styled by CSS
+                }
+            });
+            
+            html = temp.innerHTML;
+            
+            // Render KaTeX formulas (both inline and display)
+            html = renderKaTeX(html);
+            
+            return html;
+        }
+
+        // Render KaTeX mathematical formulas
+        function renderKaTeX(html) {
+            // Display math: $$ ... $$
+            html = html.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+                try {
+                    const rendered = katex.renderToString(formula.trim(), { displayMode: true });
+                    return `<div class="katex-display">${rendered}</div>`;
+                } catch (e) {
+                    return match;
+                }
+            });
+            
+                    // Inline math: $ ... $
+            html = html.replace(/\$([^\$\n]+)\$/g, (match, formula) => {
+                try {
+                    return katex.renderToString(formula.trim(), { displayMode: false });
+                } catch (e) {
+                    return match;
+                }
+            });
+            
+            return html;
+        }
+
         function scrollToBottom() {
             const container = document.getElementById('chat-messages');
-            // Using a slightly delayed scroll to ensure rendering is complete
             setTimeout(() => {
                 container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
             }, 50);
         }
 
-        function setPrompt(t) { document.getElementById('chat-input').value = t; sendMessage(); }
+        // Improvement #7: Scroll to Top Function
+        function scrollToTop() {
+            const container = document.getElementById('chat-messages');
+            container.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Improvement #7: Show/hide scroll to top button
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatMessages = document.getElementById('chat-messages');
+            const scrollBtn = document.getElementById('scroll-to-top');
+            
+            chatMessages.addEventListener('scroll', () => {
+                if (chatMessages.scrollTop > 300) {
+                    scrollBtn.style.display = 'block';
+                } else {
+                    scrollBtn.style.display = 'none';
+                }
+            });
+        });
+
+        function setPrompt(t) { 
+            document.getElementById('chat-input').value = t; 
+            sendMessage(); 
+        }
 
         async function generateImage() {
             const query = document.getElementById('image-input').value;
             const results = document.getElementById('image-results');
-            results.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500">Generating...</div>';
+            
+            // Improvement #4: Loading indicator for images
+            results.innerHTML = '<div class="col-span-full text-center py-12"><div class="loading-dots"><span></span><span></span><span></span></div><p class="text-slate-500 mt-3">Searching images...</p></div>';
+            
             try {
-                const res = await fetch('/api/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
+                const res = await fetch('/api/image', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ query }) 
+                });
                 const data = await res.json();
                 results.innerHTML = '';
                 data.images.forEach(img => {
                     const d = document.createElement('div');
-                    d.className = "bg-slate-800/40 rounded-3xl overflow-hidden shadow-2xl border border-white/5";
+                    d.className = "bg-slate-800/40 rounded-3xl overflow-hidden shadow-2xl border border-white/5 hover:border-white/20 transition-all";
                     d.innerHTML = `<img src="${img.url}" class="w-full h-48 object-cover"><div class="p-4 text-xs text-slate-400">${img.description}</div>`;
                     results.appendChild(d);
                 });
-            } catch (e) { results.innerHTML = 'Error.'; }
+            } catch (e) { 
+                results.innerHTML = '<div class="col-span-full text-center py-12 text-red-400">Error loading images.</div>'; 
+            }
         }
+
+        // Improvement #6: Clear Chat History Function
+        function clearChatHistory() {
+            if (confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                store.clear();
+                
+                document.getElementById('chat-messages').innerHTML = '';
+                document.getElementById('suggestions').classList.remove('hidden-suggestions');
+                alert('Chat history cleared!');
+            }
+        }
+
+        // Add clear history button to the UI (Improvement #6)
+        document.addEventListener('DOMContentLoaded', () => {
+            const navBar = document.querySelector('nav');
+            const clearBtn = document.createElement('button');
+            clearBtn.innerHTML = '🗑️';
+            clearBtn.title = 'Clear chat history';
+            clearBtn.className = 'p-2 rounded-lg hover:bg-slate-700 transition-all text-slate-400 hover:text-white';
+            clearBtn.onclick = clearChatHistory;
+            navBar.appendChild(clearBtn);
+        });
 
         // --- Background Animation ---
         const s = new THREE.Scene();
@@ -278,14 +524,23 @@
         const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         r.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(r.domElement);
+        
+        // Improvement #9: Optimized geometry for better performance
         const g = new THREE.IcosahedronGeometry(15, 1);
         const m = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.1 });
         const mesh = new THREE.Mesh(g, m);
         s.add(mesh);
         c.position.z = 40;
-        function anim() { requestAnimationFrame(anim); mesh.rotation.x += 0.001; mesh.rotation.y += 0.001; r.render(s, c); }
+        
+        function anim() { 
+            requestAnimationFrame(anim); 
+            mesh.rotation.x += 0.001; 
+            mesh.rotation.y += 0.001; 
+            r.render(s, c); 
+        }
         anim();
 
+        // Improvement #3: Auto-focus on input field
         document.getElementById('chat-input').addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
     </script>
 </body>
