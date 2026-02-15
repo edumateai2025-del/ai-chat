@@ -19,7 +19,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-        .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .tab-content { display: none; height: 100%; flex-direction: column; position: relative; }
         .tab-content.active { display: flex; }
         #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.2; }
@@ -44,13 +44,17 @@
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         
         .hidden-suggestions { display: none !important; }
+
+        /* Fixed heights for UI components */
+        nav { height: 64px; }
+        #input-area { min-height: 120px; }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
 
     <!-- Top Navigation Tabs -->
-    <nav class="flex w-full p-2 gap-2 glass z-50">
+    <nav class="flex w-full p-2 gap-2 glass z-50 flex-shrink-0">
         <button onclick="switchTab('ask')" id="ask-btn" class="flex-1 py-3 rounded-2xl font-bold transition-all bg-blue-600 text-white shadow-lg">Ask</button>
         <button onclick="switchTab('imagine')" id="imagine-btn" class="flex-1 py-3 rounded-2xl font-bold transition-all text-slate-400 hover:text-white">Imagine</button>
     </nav>
@@ -59,13 +63,13 @@
         
         <!-- ASK SECTION -->
         <section id="ask-section" class="tab-content active">
-            <!-- Chat Messages Area -->
-            <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-8 no-scrollbar pb-32">
+            <!-- Chat Messages Area with increased bottom padding -->
+            <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-8 no-scrollbar pb-[180px]">
                 <!-- Messages injected here -->
             </div>
 
-            <!-- Bottom Area -->
-            <div class="absolute bottom-0 left-0 w-full z-40">
+            <!-- Bottom Area Fixed -->
+            <div id="bottom-container" class="absolute bottom-0 left-0 w-full z-40">
                 <!-- Floating Suggestions -->
                 <div id="suggestions" class="flex flex-col gap-2 p-4 max-w-md mx-auto">
                     <button onclick="setPrompt('Explain the solar system')" class="bg-slate-800/90 backdrop-blur-md px-5 py-3 rounded-2xl text-xs text-slate-200 text-left animate-slide-up shadow-xl border border-white/10">☀️ Explain the solar system</button>
@@ -74,7 +78,7 @@
                 </div>
 
                 <!-- Input Bar -->
-                <div class="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-4 pb-6">
+                <div id="input-area" class="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-4 pb-8">
                     <div class="max-w-4xl mx-auto">
                         <div class="text-[10px] font-bold text-blue-400 bg-blue-500/10 w-fit px-3 py-1 rounded-full mb-2 border border-blue-500/20">AI-TUTOR-V2</div>
                         <div class="relative">
@@ -93,7 +97,7 @@
 
         <!-- IMAGINE SECTION -->
         <section id="imagine-section" class="tab-content">
-            <div class="flex-grow overflow-y-auto p-6 space-y-8 no-scrollbar pb-32">
+            <div class="flex-grow overflow-y-auto p-6 space-y-8 no-scrollbar pb-[140px]">
                 <div class="text-center space-y-2 py-8">
                     <h2 class="text-3xl font-black bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">Imagine</h2>
                     <p class="text-slate-400 text-sm">Visual inspiration for your studies.</p>
@@ -101,7 +105,7 @@
                 <div id="image-results" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
             
-            <div class="absolute bottom-0 left-0 w-full p-4 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 pb-6">
+            <div class="absolute bottom-0 left-0 w-full p-4 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 pb-8">
                 <div class="relative max-w-2xl mx-auto">
                     <input type="text" id="image-input" placeholder="Search visuals..." 
                            class="w-full bg-slate-800/50 border border-white/10 rounded-full px-6 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all">
@@ -243,7 +247,10 @@
 
         function scrollToBottom() {
             const container = document.getElementById('chat-messages');
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            // Using a slightly delayed scroll to ensure rendering is complete
+            setTimeout(() => {
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            }, 50);
         }
 
         function setPrompt(t) { document.getElementById('chat-input').value = t; sendMessage(); }
@@ -283,4 +290,3 @@
     </script>
 </body>
 </html>
-        
