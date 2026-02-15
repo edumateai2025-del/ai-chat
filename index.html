@@ -19,15 +19,15 @@
             flex-direction: column;
             overflow: hidden;
         }
-        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .tab-content { display: none; height: 100%; flex-direction: column; }
+        .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .tab-content { display: none; height: 100%; flex-direction: column; position: relative; }
         .tab-content.active { display: flex; }
-        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.2; }
         
         /* Message Styling */
         .ai-response h1 { font-size: 1.4rem; font-weight: 800; margin: 1.5rem 0 0.8rem; color: #60a5fa; }
         .ai-response h2 { font-size: 1.1rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #93c5fd; }
-        .ai-response p { margin-bottom: 1.2rem; line-height: 1.8; font-size: 0.95rem; }
+        .ai-response p { margin-bottom: 1.2rem; line-height: 1.8; font-size: 1rem; }
         .ai-response ul, .ai-response ol { margin-bottom: 1.2rem; padding-left: 1.2rem; }
         .ai-response li { margin-bottom: 0.6rem; }
         
@@ -42,6 +42,8 @@
         /* Animations */
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        
+        .hidden-suggestions { display: none !important; }
     </style>
 </head>
 <body>
@@ -58,30 +60,32 @@
         <!-- ASK SECTION -->
         <section id="ask-section" class="tab-content active">
             <!-- Chat Messages Area -->
-            <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-8 no-scrollbar pb-40">
+            <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-8 no-scrollbar pb-32">
                 <!-- Messages injected here -->
             </div>
 
-            <!-- Bottom Floating Area -->
-            <div class="absolute bottom-0 left-0 w-full p-4 space-y-4 pointer-events-none">
+            <!-- Bottom Area -->
+            <div class="absolute bottom-0 left-0 w-full z-40">
                 <!-- Floating Suggestions -->
-                <div id="suggestions" class="flex flex-col gap-2 pointer-events-auto max-w-xs ml-auto mr-auto md:ml-0">
-                    <button onclick="setPrompt('Explain the solar system')" class="glass px-4 py-2.5 rounded-full text-xs text-slate-200 text-left animate-slide-up shadow-xl border-white/10">☀️ Explain the solar system</button>
-                    <button onclick="setPrompt('Solve for x: 2x + 10 = 20')" class="glass px-4 py-2.5 rounded-full text-xs text-slate-200 text-left animate-slide-up shadow-xl border-white/10">🔢 Solve for x: 2x + 10 = 20</button>
-                    <button onclick="setPrompt('Write a story about a robot')" class="glass px-4 py-2.5 rounded-full text-xs text-slate-200 text-left animate-slide-up shadow-xl border-white/10">🤖 Write a story about a robot</button>
+                <div id="suggestions" class="flex flex-col gap-2 p-4 max-w-md mx-auto">
+                    <button onclick="setPrompt('Explain the solar system')" class="bg-slate-800/90 backdrop-blur-md px-5 py-3 rounded-2xl text-xs text-slate-200 text-left animate-slide-up shadow-xl border border-white/10">☀️ Explain the solar system</button>
+                    <button onclick="setPrompt('Solve for x: 2x + 10 = 20')" class="bg-slate-800/90 backdrop-blur-md px-5 py-3 rounded-2xl text-xs text-slate-200 text-left animate-slide-up shadow-xl border border-white/10">🔢 Solve for x: 2x + 10 = 20</button>
+                    <button onclick="setPrompt('Write a story about a robot')" class="bg-slate-800/90 backdrop-blur-md px-5 py-3 rounded-2xl text-xs text-slate-200 text-left animate-slide-up shadow-xl border border-white/10">🤖 Write a story about a robot</button>
                 </div>
 
-                <!-- Model Badge & Input -->
-                <div class="pointer-events-auto">
-                    <div class="text-[10px] font-bold text-blue-400 bg-blue-500/10 w-fit px-3 py-1 rounded-full mb-2 ml-2 border border-blue-500/20">AI-TUTOR-V2</div>
-                    <div class="relative">
-                        <input type="text" id="chat-input" placeholder="Message..." 
-                               class="w-full bg-slate-900/90 border border-white/10 rounded-[2rem] px-6 py-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-base shadow-2xl">
-                        <button onclick="sendMessage()" class="absolute right-2 top-2 bg-blue-600 hover:bg-blue-500 p-3 rounded-full transition-all shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
-                        </button>
+                <!-- Input Bar -->
+                <div class="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-4 pb-6">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="text-[10px] font-bold text-blue-400 bg-blue-500/10 w-fit px-3 py-1 rounded-full mb-2 border border-blue-500/20">AI-TUTOR-V2</div>
+                        <div class="relative">
+                            <input type="text" id="chat-input" placeholder="Message..." 
+                                   class="w-full bg-slate-800/50 border border-white/10 rounded-[1.5rem] px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-base">
+                            <button onclick="sendMessage()" class="absolute right-2 top-1.5 bg-blue-600 hover:bg-blue-500 p-2.5 rounded-full transition-all shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -97,10 +101,10 @@
                 <div id="image-results" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
             
-            <div class="absolute bottom-0 left-0 w-full p-4 glass border-t border-white/5">
+            <div class="absolute bottom-0 left-0 w-full p-4 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 pb-6">
                 <div class="relative max-w-2xl mx-auto">
                     <input type="text" id="image-input" placeholder="Search visuals..." 
-                           class="w-full bg-slate-900/80 border border-white/10 rounded-full px-6 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all">
+                           class="w-full bg-slate-800/50 border border-white/10 rounded-full px-6 py-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all">
                     <button onclick="generateImage()" class="absolute right-2 top-1.5 bg-purple-600 p-2.5 rounded-full">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -139,11 +143,15 @@
         function loadMessages() {
             const transaction = db.transaction([STORE_NAME], 'readonly');
             const store = transaction.objectStore(STORE_NAME);
+            const messages = [];
             store.openCursor().onsuccess = (e) => {
                 const cursor = e.target.result;
                 if (cursor) {
-                    renderMessage(cursor.value.text, cursor.value.sender, false);
+                    messages.push(cursor.value);
                     cursor.continue();
+                } else {
+                    if(messages.length > 0) hideSuggestions();
+                    messages.forEach(m => renderMessage(m.text, m.sender, false));
                 }
             };
         }
@@ -154,8 +162,8 @@
             const store = transaction.objectStore(STORE_NAME);
             store.openCursor().onsuccess = (e) => {
                 const cursor = e.target.result;
-                if (cursor) {
-                    if (cursor.value.timestamp < thirtyDaysAgo) store.delete(cursor.key);
+                if (cursor && cursor.value.timestamp < thirtyDaysAgo) {
+                    store.delete(cursor.key);
                     cursor.continue();
                 }
             };
@@ -170,12 +178,17 @@
             document.getElementById('imagine-btn').className = !isAsk ? "flex-1 py-3 rounded-2xl font-bold transition-all bg-purple-600 text-white shadow-lg" : "flex-1 py-3 rounded-2xl font-bold transition-all text-slate-400 hover:text-white";
         }
 
+        function hideSuggestions() {
+            document.getElementById('suggestions').classList.add('hidden-suggestions');
+        }
+
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
             
+            hideSuggestions();
             renderMessage(text, 'user');
             saveMessage(text, 'user');
 
@@ -200,14 +213,14 @@
             const isUser = sender === 'user';
             
             const div = document.createElement('div');
-            div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} animate-slide-up`;
+            div.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-slide-up`;
             div.innerHTML = `
-                <div class="${isUser ? 'bg-blue-600 text-white rounded-3xl rounded-tr-none' : 'bg-slate-800/80 text-slate-100 rounded-3xl rounded-tl-none'} px-5 py-4 max-w-[85%] shadow-xl border border-white/5">
+                <div class="${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-800/60 text-slate-100 rounded-2xl rounded-tl-none'} px-5 py-4 w-full max-w-[95%] shadow-lg border border-white/5">
                     <div id="${id}" class="ai-response">${isNewAI ? '' : marked.parse(text)}</div>
                 </div>
             `;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            scrollToBottom();
             return id;
         }
 
@@ -219,13 +232,18 @@
                 if (i < fullText.length) {
                     el.innerHTML = marked.parse(fullText.substring(0, i + 1));
                     i++;
-                    const container = document.getElementById('chat-messages');
-                    container.scrollTop = container.scrollHeight;
+                    scrollToBottom();
                 } else {
                     clearInterval(interval);
                     el.classList.remove('typing');
+                    scrollToBottom();
                 }
-            }, 20);
+            }, 15);
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chat-messages');
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
         }
 
         function setPrompt(t) { document.getElementById('chat-input').value = t; sendMessage(); }
@@ -240,7 +258,7 @@
                 results.innerHTML = '';
                 data.images.forEach(img => {
                     const d = document.createElement('div');
-                    d.className = "glass rounded-3xl overflow-hidden shadow-2xl";
+                    d.className = "bg-slate-800/40 rounded-3xl overflow-hidden shadow-2xl border border-white/5";
                     d.innerHTML = `<img src="${img.url}" class="w-full h-48 object-cover"><div class="p-4 text-xs text-slate-400">${img.description}</div>`;
                     results.appendChild(d);
                 });
@@ -263,6 +281,6 @@
 
         document.getElementById('chat-input').addEventListener('keypress', (e) => e.key === 'Enter' && sendMessage());
     </script>
-    </body>
+</body>
 </html>
         
