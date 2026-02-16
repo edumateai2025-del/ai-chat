@@ -161,7 +161,6 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
             width: 44px;
             height: 44px;
-            display: flex;
             align-items: center;
             justify-content: center;
         }
@@ -200,6 +199,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 1rem 0.8rem;
+            padding-bottom: 120px;
             display: flex;
             flex-direction: column;
             gap: 0.8rem;
@@ -354,9 +354,8 @@
                 <button onclick="setPrompt('Explain the solar system')" class="suggestion-btn">☀️ Explain the solar system</button>
                 <button onclick="setPrompt('Solve for x: 2x + 10 = 20')" class="suggestion-btn">🔢 Solve for x: 2x + 10 = 20</button>
                 <button onclick="setPrompt('Write a story about a robot')" class="suggestion-btn">🤖 Write a story about a robot</button>
-            </div>
-
-            <!-- Input Bar - FIXED at bottom -->
+    </div>
+       <!-- Input Bar - FIXED at bottom -->
             <div id="input-area">
                 <div class="max-w-4xl">
                     <label class="input-label">AI-TUTOR-V2</label>
@@ -505,7 +504,82 @@
             div.innerHTML = `
                 <div class="${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-800/60 text-slate-100 rounded-2xl rounded-tl-none'} px-4 py-3 max-w-[85%] shadow-lg border border-white/5">
                     <div id="${id}" class="ai-response">${messageContent}</div>
-                    ${!isUser && !isNewAI ? `<button class="
+                    ${!isUser && !isNewAI ? `<button class="copy-btn" onclick="copyToClipboard('${id}')">📋 Copy</button>` : ''}
+                </div>
+            `;
+            
+            container.appendChild(div);
+            scrollToLatest();
+            return id;
+        }
+
+        function typeText(id, text) {
+            const element = document.getElementById(id);
+            element.parentElement.querySelector('.copy-btn')?.remove();
+            
+            let i = 0;
+            element.innerHTML = '';
+            element.classList.add('typing');
+            
+            const interval = setInterval(() => {
+                if (i < text.length) {
+                    element.innerHTML = formatAndRenderText(text.substring(0, i + 1));
+                    i++;
+                    scrollToLatest();
+                } else {
+                    clearInterval(interval);
+                    element.classList.remove('typing');
+                    element.innerHTML = formatAndRenderText(text);
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-btn';
+                    copyBtn.textContent = '📋 Copy';
+                    copyBtn.onclick = () => copyToClipboard(id);
+                    element.parentElement.appendChild(copyBtn);
+                }
+            }, 20);
+        }
+
+        function copyToClipboard(id) {
+            const element = document.getElementById(id);
+            const text = element.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = element.parentElement.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy text');
+            });
+        }
+
+        function formatAndRenderText(text) {
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (err) {}
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true,
+                gfm: true
+            });
+            
+            let html = marked.parse(text);
+            
+            // Display math: $$ ... $$
+            html = html.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+                try {
+                    return katex.renderToString(formula.trim(), { displayMode: true });
+                } catch (e) {
+                    return match;
+                }
+            });
+            
             // Inline math: $ ... $
             html = html.replace(/\$([^\$\n]+)\$/g, (match, formula) => {
                 try {
