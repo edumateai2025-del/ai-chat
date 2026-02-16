@@ -31,13 +31,13 @@
         #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.2; }
         
         /* Message Styling */
-        .ai-response h1 { font-size: 1.8rem; font-weight: 800; margin: 1.5rem 0 0.8rem; color: #60a5fa; border-bottom: 2px solid rgba(96, 165, 250, 0.3); padding-bottom: 0.5rem; }
-        .ai-response h2 { font-size: 1.4rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #93c5fd; }
-        .ai-response h3 { font-size: 1.1rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #bfdbfe; }
-        .ai-response p { margin-bottom: 1.2rem; line-height: 1.8; font-size: 1rem; }
-        .ai-response ul { margin-bottom: 1.2rem; padding-left: 2rem; list-style-type: disc; }
-        .ai-response ol { margin-bottom: 1.2rem; padding-left: 2rem; list-style-type: decimal; }
-        .ai-response li { margin-bottom: 0.6rem; line-height: 1.6; }
+        .ai-response h1 { font-size: 1.4rem; font-weight: 800; margin: 1rem 0 0.5rem; color: #60a5fa; border-bottom: 2px solid rgba(96, 165, 250, 0.3); padding-bottom: 0.4rem; }
+        .ai-response h2 { font-size: 1.1rem; font-weight: 700; margin: 0.8rem 0 0.4rem; color: #93c5fd; }
+        .ai-response h3 { font-size: 0.95rem; font-weight: 700; margin: 0.7rem 0 0.3rem; color: #bfdbfe; }
+        .ai-response p { margin-bottom: 0.8rem; line-height: 1.6; font-size: 0.95rem; }
+        .ai-response ul { margin-bottom: 0.8rem; padding-left: 1.5rem; list-style-type: disc; }
+        .ai-response ol { margin-bottom: 0.8rem; padding-left: 1.5rem; list-style-type: decimal; }
+        .ai-response li { margin-bottom: 0.4rem; line-height: 1.5; font-size: 0.95rem; }
         
         /* Code Block Styling */
         .ai-response code { 
@@ -135,8 +135,8 @@
         /* Scroll to Top Button */
         #scroll-to-top {
             position: fixed;
-            bottom: 150px;
-            right: 20px;
+            bottom: 100px;
+            right: 15px;
             background: rgba(59, 130, 246, 0.8);
             border: none;
             color: white;
@@ -155,7 +155,7 @@
 
         /* Fixed heights for UI components */
         nav { height: 64px; }
-        #input-area { min-height: 120px; }
+        #input-area { min-height: 80px; }
     </style>
 </head>
 <body>
@@ -172,7 +172,7 @@
         <!-- ASK SECTION -->
         <section id="ask-section" class="tab-content active">
             <!-- Chat Messages Area with increased bottom padding -->
-            <div id="chat-messages" class="flex-grow overflow-y-auto p-4 space-y-8 no-scrollbar pb-[180px]">
+            <div id="chat-messages" class="flex-grow overflow-y-auto p-2 space-y-4 no-scrollbar pb-[140px]">
                 <!-- Messages injected here -->
             </div>
 
@@ -193,13 +193,13 @@
                 </div>
 
                 <!-- Input Bar -->
-                <div id="input-area" class="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-4 pb-8">
+                <div id="input-area" class="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 p-2 pb-4">
                     <div class="max-w-4xl mx-auto">
-                        <div class="text-[10px] font-bold text-blue-400 bg-blue-500/10 w-fit px-3 py-1 rounded-full mb-2 border border-blue-500/20">AI-TUTOR-V2</div>
+                        <div class="text-[9px] font-bold text-blue-400 bg-blue-500/10 w-fit px-2 py-0.5 rounded-full mb-1 border border-blue-500/20">AI-TUTOR-V2</div>
                         <div class="relative">
                             <input type="text" id="chat-input" placeholder="Message..." 
-                                   class="w-full bg-slate-800/50 border border-white/10 rounded-[1.5rem] px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-base">
-                            <button onclick="sendMessage()" class="absolute right-2 top-1.5 bg-blue-600 hover:bg-blue-500 p-2.5 rounded-full transition-all shadow-lg">
+                                   class="w-full bg-slate-800/50 border border-white/10 rounded-[1.5rem] px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm">
+                            <button onclick="sendMessage()" class="absolute right-2 top-1 bg-blue-600 hover:bg-blue-500 p-2 rounded-full transition-all shadow-lg">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                 </svg>
@@ -424,8 +424,7 @@
                     return match;
                 }
             });
-
-        
+            
             // Inline math: $ ... $
             html = html.replace(/\$([^\$\n]+)\$/g, (match, formula) => {
                 try {
@@ -445,10 +444,15 @@
             }, 50);
         }
 
-        // Improvement #7: Scroll to Top Function
+        // Improvement #7: Smart Scroll Button
         function scrollToTop() {
             const container = document.getElementById('chat-messages');
-            container.scrollTo({ top: 0, behavior: 'smooth' });
+            const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+            if (isAtBottom) {
+                container.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            }
         }
 
         // Improvement #7: Show/hide scroll to top button
@@ -457,7 +461,7 @@
             const scrollBtn = document.getElementById('scroll-to-top');
             
             chatMessages.addEventListener('scroll', () => {
-                if (chatMessages.scrollTop > 300) {
+                if (chatMessages.scrollTop > 100) {
                     scrollBtn.style.display = 'block';
                 } else {
                     scrollBtn.style.display = 'none';
