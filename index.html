@@ -337,7 +337,7 @@
             
             const messageContent = isNewAI ? 
                 '<div class="loading-dots"><span></span><span></span><span></span></div>' : 
-                '';
+                (isUser ? text : formatAndRenderText(text));
             
             div.innerHTML = `
                 <div class="${isUser ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-800/60 text-slate-100 rounded-2xl rounded-tl-none'} px-5 py-4 w-full max-w-[95%] shadow-lg border border-white/5">
@@ -367,12 +367,13 @@
             let i = 0;
             const interval = setInterval(() => {
                 if (i < fullText.length) {
-                    el.innerHTML = formatAndRenderText(fullText.substring(0, i + 1));
+                    el.textContent = fullText.substring(0, i + 1);
                     i++;
                     scrollToBottom();
                 } else {
                     clearInterval(interval);
                     el.classList.remove('typing');
+                    // Only format and render the complete text once at the end
                     el.innerHTML = formatAndRenderText(fullText);
                     scrollToBottom();
                 }
@@ -423,8 +424,9 @@
                     return match;
                 }
             });
-            
-                    // Inline math: $ ... $
+
+        
+            // Inline math: $ ... $
             html = html.replace(/\$([^\$\n]+)\$/g, (match, formula) => {
                 try {
                     return katex.renderToString(formula.trim(), { displayMode: false });
